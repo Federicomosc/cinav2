@@ -6,7 +6,8 @@
   import { computeOggi } from '../lib/today';
   import { db, now } from '../db/dexie';
   import { liveQuery } from 'dexie';
-  import type { CityId, Giorno, GiornoSchedule } from '../data/types';
+  import type { Giorno, GiornoSchedule } from '../data/types';
+  import { cityThemeByItalianName } from '../lib/city-theme';
 
   const SCHEDULE_SLOTS: { key: keyof GiornoSchedule; label: string }[] = [
     { key: 'mattino', label: 'Mattino' },
@@ -25,14 +26,7 @@
     }));
   }
 
-  const CITY: Record<string, { id?: CityId; color: string; hanzi: string; icon: string }> = {
-    Chengdu: { id: 'chengdu', color: '#52b788', hanzi: '成都', icon: '🐼' },
-    Chongqing: { id: 'chongqing', color: '#e05252', hanzi: '重庆', icon: '🌶️' },
-    Zhangjiajie: { id: 'zhangjiajie', color: '#4fc3c7', hanzi: '张家界', icon: '⛰️' },
-    Pechino: { id: 'pechino', color: '#e0b552', hanzi: '北京', icon: '🏯' },
-    Shanghai: { id: 'shanghai', color: '#9b6fd4', hanzi: '上海', icon: '🌃' },
-    'In viaggio': { color: '#8a7d6e', hanzi: '行', icon: '✈️' },
-  };
+  const CITY = (name: string) => cityThemeByItalianName(name);
 
   const oggi = computeOggi(itinerario, transports);
   const todayN = giorni.find((g) => g.date === oggi.todayIso)?.n ?? 1;
@@ -93,7 +87,7 @@
       ? day.acts.filter((a) => checkedActs.has(actId(day.n, a.label))).length
       : 0,
   );
-  const meta = $derived(CITY[day.city] ?? CITY['In viaggio']);
+  const meta = $derived(CITY(day.city));
   const tr = $derived(transports.find((t) => t.departAt.slice(0, 10) === day.date));
   const hotel = $derived(meta.id ? alloggi.find((a) => a.city === meta.id) : undefined);
   const isToday = $derived(day.date === oggi.todayIso);
@@ -137,14 +131,14 @@
 
     <div class="day-chips" bind:this={chipRow}>
       {#each giorni as g (g.n)}
-        {@const cm = CITY[g.city] ?? CITY['In viaggio']}
+        {@const cm = CITY(g.city)}
         {@const isT = g.date === oggi.todayIso}
         <button
           class="day-chip"
           class:on={focus === g.n}
           class:today={isT}
           data-n={g.n}
-          style="--c:{cm.color}"
+          style="--c:{cm.accent}"
           onclick={() => pick(g.n)}
           aria-current={focus === g.n ? 'step' : undefined}
           aria-label="Giorno {g.n}, {shortDate(g.date)}"
@@ -161,7 +155,7 @@
 
   <!-- Scheda del giorno -->
   {#key focus}
-    <article class="day-sheet" style="--c:{meta.color}">
+    <article class="day-sheet" style="--c:{meta.accent}">
       <div class="sheet-accent" aria-hidden="true"></div>
 
       <header class="sheet-head">
@@ -283,8 +277,8 @@
     </summary>
     <div class="ov-list">
       {#each giorni as g (g.n)}
-        {@const cm = CITY[g.city] ?? CITY['In viaggio']}
-        <button class="ov-row" style="--c:{cm.color}" onclick={() => pick(g.n)}>
+        {@const cm = CITY(g.city)}
+        <button class="ov-row" style="--c:{cm.accent}" onclick={() => pick(g.n)}>
           <span class="ov-n">{g.n}</span>
           <span class="ov-body">
             <span class="ov-title">{g.title}</span>

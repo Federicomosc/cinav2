@@ -11,6 +11,7 @@ export const tabs = [
   'spese',
   'emergenze',
   'album',
+  'altro',
 ] as const;
 
 export type Tab = (typeof tabs)[number];

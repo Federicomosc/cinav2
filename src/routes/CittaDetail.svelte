@@ -6,19 +6,13 @@
   import { shortDate } from '../lib/format';
   import type { CityId } from '../data/types';
 
-  const CITY_ACCENT: Record<string, string> = {
-    chengdu: '#52b788',
-    chongqing: '#e05252',
-    zhangjiajie: '#4fc3c7',
-    pechino: '#e0b552',
-    shanghai: '#9b6fd4',
-  };
+  import { cityTheme } from '../lib/city-theme';
 
   const city = $derived(nav.id ? cittaById.get(nav.id as CityId) : undefined);
   const content = $derived(city ? cittaContentById.get(city.id) : undefined);
   const cityPois = $derived(city ? poisOfCity(city.id) : []);
   const leg = $derived(city ? legByCity.get(city.id) : undefined);
-  const accent = $derived(city ? (CITY_ACCENT[city.id] ?? '#e84828') : '#e84828');
+  const accent = $derived(city ? cityTheme(city.id).accent : '#e84828');
 </script>
 
 {#if !city}

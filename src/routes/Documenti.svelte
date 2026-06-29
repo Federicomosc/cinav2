@@ -80,8 +80,35 @@
   let deleteTarget = $state<SecureDoc | null>(null);
   let showResetConfirm = $state(false);
   let resetConfirmOpening = false;
+  let thumbUrls = $state(new Map<string, string>());
 
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function clearThumbs() {
+    for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
+    thumbUrls = new Map();
+  }
+
+  async function ensureThumb(doc: SecureDoc) {
+    if (!key || thumbUrls.has(doc.id) || !doc.mime.startsWith('image/')) return;
+    try {
+      const buf = await decryptBytes(key, normalizeIv(doc.iv), normalizeCipher(doc.cipher));
+      const blob = new Blob([buf], { type: doc.mime });
+      const url = URL.createObjectURL(blob);
+      thumbUrls.set(doc.id, url);
+      thumbUrls = new Map(thumbUrls);
+    } catch {
+      /* anteprima opzionale */
+    }
+  }
+
+  $effect(() => {
+    if (vstate !== 'unlocked' || !key) {
+      clearThumbs();
+      return;
+    }
+    for (const d of docs) void ensureThumb(d);
+  });
 
   onMount(() => {
     void ensureChecklist();
@@ -128,6 +155,7 @@
 
   function lockVault() {
     clearIdleLock();
+    clearThumbs();
     key = null;
     closePreview({ resumeIdle: false });
     if (vault) vstate = 'locked';
@@ -237,7 +265,7 @@
   function normalizeCipher(cipher: SecureDoc['cipher']): ArrayBuffer {
     if (cipher instanceof ArrayBuffer) return cipher;
     const view = cipher as ArrayBufferView;
-    return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+    return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
   }
 
   function isGenericTitle(doc: SecureDoc) {
@@ -501,7 +529,11 @@
             <ul class="doc-list">
               {#each docsSorted as d (d.id)}
                 <li class="doc-row">
-                  <span class="doc-icon" aria-hidden="true">{KIND_ICON[d.kind]}</span>
+                  {#if thumbUrls.get(d.id)}
+                    <img class="doc-thumb" src={thumbUrls.get(d.id)} alt="" />
+                  {:else}
+                    <span class="doc-icon" aria-hidden="true">{KIND_ICON[d.kind]}</span>
+                  {/if}
                   <div class="doc-body">
                     <span class="doc-kind-badge">{KIND_LABEL[d.kind]}</span>
                     <span class="doc-title">{docDisplayTitle(d)}</span>
@@ -545,7 +577,7 @@
           <span class="preview-kind">{KIND_ICON[preview.kind]} {KIND_LABEL[preview.kind]}</span>
           <h3 id="preview-title" class="preview-title">{preview.title}</h3>
         </div>
-        <button type="button" class="preview-close" onclick={closePreview}>Chiudi</button>
+        <button type="button" class="preview-close" onclick={() => closePreview()}>Chiudi</button>
       </header>
       <div class="preview-body">
         {#if preview.mime.startsWith('image/')}
@@ -907,6 +939,15 @@
     background: var(--jade-soft);
     border: 1px solid color-mix(in srgb, var(--jade) 28%, transparent);
     border-radius: 10px;
+  }
+  .doc-thumb {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
   }
   .doc-body {
     flex: 1;

@@ -16,6 +16,9 @@
   import { CAT_COLOR, CAT_ICON, CAT_LABEL } from '../lib/poi';
   import { offlineMapStyle } from '../lib/mapStyle';
   import { online } from '../lib/online.svelte';
+  import PageHeader from '../components/PageHeader.svelte';
+  import PoiPhoto from '../components/PoiPhoto.svelte';
+  import { cityTheme } from '../lib/city-theme';
   import type { CityId, PoiCategory } from '../data/types';
 
   const LEGEND: PoiCategory[] = ['storico', 'moderno', 'natura', 'intrattenimento', 'cibo'];
@@ -324,10 +327,19 @@
   }
 </script>
 
+<div class="mappa-page">
+<PageHeader eyebrow="◎ offline" title="Mappa" sub="POI, posizione GPS e percorsi a piedi." />
+
 <div class="topbar">
   <div class="cities">
     {#each citta as c (c.id)}
-      <button class="city" class:on={activeCity === c.id} onclick={() => flyTo(c.id)}>{c.name}</button>
+      {@const th = cityTheme(c.id)}
+      <button
+        class="city"
+        class:on={activeCity === c.id}
+        style={activeCity === c.id ? `--c:${th.accent}` : undefined}
+        onclick={() => flyTo(c.id)}
+      >{th.icon} {c.name}</button>
     {/each}
   </div>
 </div>
@@ -337,6 +349,7 @@
 
   {#if navDestPoi}
     <aside class="nav-sheet" aria-label="Navigazione verso {navDestPoi.name}">
+      <PoiPhoto id={navDestPoi.id} category={navDestPoi.category} name={navDestPoi.name} variant="hero" />
       <div class="nav-head">
         <span class="nav-label">Destinazione</span>
         <strong class="nav-name">{navDestPoi.name}</strong>
@@ -393,8 +406,10 @@
   <p class="banner hint">Percorsi stradali: esegui <code>npm run tiles:routing</code> per il routing offline.</p>
 {/if}
 {#if geoNote}<p class="banner">{geoNote}</p>{/if}
+</div>
 
 <style>
+  .mappa-page { margin-top: -8px; }
   .topbar { margin: -6px -4px 12px; }
   .cities { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
   .cities::-webkit-scrollbar { display: none; }
@@ -411,10 +426,10 @@
     transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
   }
   .city.on {
-    background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c, var(--jade)) 88%, #000) 0%, var(--c, var(--jade)) 100%);
     color: #fff;
-    border-color: var(--jade);
-    box-shadow: 0 4px 12px var(--jade-soft);
+    border-color: var(--c, var(--jade));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--c, var(--jade)) 35%, transparent);
   }
   .city:active { transform: scale(0.97); }
   .map-wrap { position: relative; }

@@ -3,14 +3,8 @@
   import { citta, legByCity, poisOfCity } from '../lib/content';
   import { go } from '../lib/router.svelte';
   import { shortDate } from '../lib/format';
-
-  const CITY_ACCENT: Record<string, string> = {
-    chengdu: '#52b788',
-    chongqing: '#e05252',
-    zhangjiajie: '#4fc3c7',
-    pechino: '#e0b552',
-    shanghai: '#9b6fd4',
-  };
+  import { cityTheme, cityCoverSrc } from '../lib/city-theme';
+  import type { CityId } from '../data/types';
 </script>
 
 <PageHeader eyebrow="5 tappe" title="Città" sub="Tocca una tappa per guida, POI e itinerari." />
@@ -18,17 +12,21 @@
 <div class="list-stack">
   {#each citta as c, i (c.id)}
     {@const leg = legByCity.get(c.id)}
-    {@const accent = CITY_ACCENT[c.id] ?? '#e84828'}
+    {@const theme = cityTheme(c.id)}
     <button
       class="city-card card card-interactive"
-      style="--accent: {accent}"
+      style="--accent: {theme.accent}"
       onclick={() => go('citta', c.id)}
     >
+      <div class="cover-wrap" aria-hidden="true">
+        <img class="cover" src={cityCoverSrc(c.id)} alt="" loading="lazy" decoding="async" />
+        <div class="cover-fade"></div>
+      </div>
       <div class="bar" aria-hidden="true"></div>
       <div class="inner">
         <span class="wm" aria-hidden="true">{c.nameLocal}</span>
         <div class="top">
-          <span class="step">Tappa {i + 1}</span>
+          <span class="step">{theme.icon} Tappa {i + 1}</span>
           {#if leg}<span class="when">{shortDate(leg.from)} – {shortDate(leg.to)}</span>{/if}
         </div>
         <h2 class="name">{c.name}</h2>
@@ -36,7 +34,7 @@
         <p class="intro prose-lead">{c.intro}</p>
         <div class="foot">
           <p class="highlights">{c.highlights.slice(0, 3).join(' · ')}</p>
-          <span class="count">{poisOfCity(c.id).length} POI ›</span>
+          <span class="count">{poisOfCity(c.id as CityId).length} POI ›</span>
         </div>
       </div>
     </button>
@@ -52,18 +50,36 @@
     position: relative;
     overflow: hidden;
   }
+  .cover-wrap {
+    position: relative;
+    height: 108px;
+    overflow: hidden;
+  }
+  .cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.72;
+    filter: saturate(1.1);
+  }
+  .cover-fade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 20%, var(--surface) 100%);
+  }
   .bar {
     height: 3px;
     background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
   }
   .inner {
-    padding: 16px 18px 18px;
+    padding: 14px 18px 18px;
     position: relative;
+    margin-top: -24px;
   }
   .wm {
     position: absolute;
     right: 10px;
-    top: 6px;
+    top: -8px;
     font-family: var(--hanzi);
     font-size: 3.2rem;
     font-weight: 600;

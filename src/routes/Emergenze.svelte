@@ -7,7 +7,14 @@
 
   const members = itinerario.trip.members;
 
-  // campi scheda medica con etichetta bilingue (da mostrare al personale sanitario)
+  const EMG_ZH: Record<string, string> = {
+    Polizia: '警察',
+    Ambulanza: '急救',
+    Pompieri: '火警',
+    'Incidenti stradali': '交通事故',
+    'Hotline turistica nazionale': '旅游热线',
+  };
+
   const FIELDS: { key: keyof Omit<MedicalCard, 'member'>; it: string; zh: string }[] = [
     { key: 'bloodType', it: 'Gruppo sanguigno', zh: '血型' },
     { key: 'allergies', it: 'Allergie', zh: '过敏' },
@@ -38,33 +45,42 @@
 
 <PageHeader eyebrow="✚ sempre offline" title="Emergenze" sub="Numeri grandi e toccabili. Funziona senza rete." />
 
-<h3 class="section-cat">Emergenze cinesi</h3>
+<div class="block-head">
+  <h2 class="block-title">Emergenze cinesi</h2>
+  <span class="block-sub">🇨🇳</span>
+</div>
 <div class="grid">
   {#each emergenze.cinesi as e (e.number)}
-    <a class="num card" href={`tel:${e.number}`}>
+    <a class="num card card-interactive" href={`tel:${e.number}`}>
       <span class="n">{e.number}</span>
       <span class="l">{e.label}</span>
+      {#if EMG_ZH[e.label]}<span class="zh">{EMG_ZH[e.label]}</span>{/if}
     </a>
   {/each}
 </div>
 
-<h3 class="section-cat">Rete consolare italiana</h3>
+<div class="block-head">
+  <h2 class="block-title">Rete consolare italiana</h2>
+  <span class="block-sub">🇮🇹</span>
+</div>
 <div class="list">
   {#each emergenze.consolari as c (c.name + c.city)}
-    <article class="card">
+    <article class="card cons">
       <div class="ctop"><b>{c.name}</b><span class="city">{c.city}</span></div>
       {#if c.address}<p class="addr">{c.address}</p>{/if}
       {#if c.addressLocal}<p class="addr-cn">{c.addressLocal}</p>{/if}
       <div class="phones">
         {#if c.phone}<a href={`tel:${c.phone.replace(/\s/g, '')}`}>☎ {c.phone}</a>{/if}
-        {#if c.emergency24h}<a href={`tel:${c.emergency24h.replace(/\s/g, '')}`}>SOS 24h</a>{/if}
+        {#if c.emergency24h}<a class="sos" href={`tel:${c.emergency24h.replace(/\s/g, '')}`}>SOS 24h</a>{/if}
       </div>
       {#if !c.verified}<div class="warn">⚠ da confermare sul sito Farnesina</div>{/if}
     </article>
   {/each}
 </div>
 
-<h3 class="section-cat">Schede mediche</h3>
+<div class="block-head">
+  <h2 class="block-title">Schede mediche</h2>
+</div>
 <p class="muted hint">Da mostrare al personale sanitario — etichette anche in cinese.</p>
 <div class="list">
   {#each members as m (m)}
@@ -83,7 +99,7 @@
             <input type="text" bind:value={draft[f.key]} />
           </label>
         {/each}
-        <button class="save" onclick={save}>Salva</button>
+        <button class="save btn-primary" onclick={save}>Salva</button>
       {:else}
         <div class="med-grid">
           {#each FIELDS as f (f.key)}
@@ -102,7 +118,7 @@
 
 <style>
   .hint { font-size: 0.82rem; margin: -6px 0 10px; }
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 8px; }
   .num {
     display: flex;
     flex-direction: column;
@@ -112,9 +128,8 @@
     text-decoration: none;
     color: var(--ink);
     padding: 20px 10px;
-    transition: transform 0.15s var(--ease), border-color 0.15s;
+    min-height: 120px;
   }
-  .num:active { transform: scale(0.97); border-color: var(--cinabro); }
   .num .n {
     font-family: var(--serif);
     font-size: 2.6rem;
@@ -131,15 +146,23 @@
     color: var(--ink-faint);
     text-align: center;
   }
-  .list { display: flex; flex-direction: column; gap: 12px; }
+  .num .zh {
+    font-family: var(--hanzi);
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+  .cons { border-color: color-mix(in srgb, var(--gold) 22%, var(--line-strong)); }
   .ctop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .city { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.04em; }
   .addr { font-size: 0.88rem; margin: 8px 0 0; color: var(--ink-soft); }
   .addr-cn { font-family: var(--hanzi); font-size: 1.15rem; margin: 4px 0 0; }
-  .phones { display: flex; gap: 16px; margin-top: 10px; font-family: var(--mono); font-size: 0.88rem; }
-  .phones a { color: var(--jade-bright); }
+  .phones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-family: var(--mono); font-size: 0.88rem; }
+  .phones a { color: var(--jade-bright); padding: 4px 0; }
+  .phones a.sos { color: var(--cinabro-bright); }
   .warn { margin-top: 10px; font-size: 0.78rem; color: var(--gold); }
-  .edit { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--jade-bright); padding: 4px 0; }
+  .edit { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--jade-bright); padding: 8px 4px; min-height: 36px; }
   .med-grid { display: flex; flex-direction: column; gap: 0; margin-top: 10px; }
   .mrow { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .mrow:last-child { border-bottom: none; }

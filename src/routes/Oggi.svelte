@@ -15,6 +15,7 @@
   import { liveQuery } from 'dexie';
   import { onMount } from 'svelte';
   import type { CityId } from '../data/types';
+  import { cityTheme } from '../lib/city-theme';
 
   const info = computeOggi(itinerario, transports);
   const city = $derived(info.leg ? cittaById.get(info.leg.city) : undefined);
@@ -22,21 +23,7 @@
   const typeLabel: Record<string, string> = { flight: 'Volo', train: 'Treno', bus: 'Bus' };
   const typeIcon: Record<string, string> = { flight: '✈', train: '🚄', bus: '🚌' };
 
-  const CITY_ACCENT: Record<string, string> = {
-    chengdu: '#52b788',
-    chongqing: '#e05252',
-    zhangjiajie: '#4fc3c7',
-    pechino: '#e0b552',
-    shanghai: '#9b6fd4',
-  };
-  const CITY_ICON: Record<string, string> = {
-    chengdu: '🐼',
-    chongqing: '🌶️',
-    zhangjiajie: '⛰️',
-    pechino: '🏯',
-    shanghai: '🌃',
-  };
-  const accent = $derived(info.leg ? (CITY_ACCENT[info.leg.city] ?? '#e04a28') : '#e04a28');
+  const accent = $derived(info.leg ? cityTheme(info.leg.city).accent : '#e04a28');
 
   const tripTotalDays = $derived(daysBetween(itinerario.trip.start, itinerario.trip.end) + 1);
   const tripDay = $derived(
@@ -73,7 +60,7 @@
   const todayAllDone = $derived(
     !!todayProgram?.acts.length && todayProgress === todayProgram.acts.length,
   );
-  const cityIcon = $derived(info.leg ? (CITY_ICON[info.leg.city] ?? '📍') : '📍');
+  const cityIcon = $derived(info.leg ? cityTheme(info.leg.city).icon : '📍');
 
   const bookings = $derived(
     info.leg ? poisOfCity(info.leg.city).filter((p) => p.booking && /obblig/i.test(p.booking)) : [],

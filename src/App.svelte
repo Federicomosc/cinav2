@@ -13,6 +13,7 @@
   import Spese from './routes/Spese.svelte';
   import Emergenze from './routes/Emergenze.svelte';
   import Album from './routes/Album.svelte';
+  import Altro from './routes/Altro.svelte';
   import type { Component } from 'svelte';
 
   const tabViews: Record<Tab, Component> = {
@@ -25,6 +26,7 @@
     spese: Spese,
     emergenze: Emergenze,
     album: Album,
+    altro: Altro,
   };
 
   function resolve(): { comp: Component; key: string } {
@@ -44,7 +46,9 @@
   <main class="screen">
     <OfflineBanner />
     {#key route.key}
-      <Comp />
+      <div class="route-view">
+        <Comp />
+      </div>
     {/key}
   </main>
 

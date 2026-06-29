@@ -133,7 +133,15 @@ body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   padding: calc(22px + var(--safe-top)) 20px 16px;
-  animation: fadeUp 0.45s var(--ease) both;
+}
+
+.route-view {
+  animation: routeIn 0.24s var(--ease) both;
+}
+
+@keyframes routeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeUp {
@@ -395,6 +403,87 @@ button {
   background: linear-gradient(180deg, var(--cinabro-bright) 0%, var(--gold) 100%);
   box-shadow: 0 0 10px var(--cinabro-glow);
   flex: none;
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+.block-title {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.block-title::before {
+  content: '';
+  width: 3px;
+  height: 0.95em;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
+  box-shadow: 0 0 8px var(--cinabro-glow);
+  flex: none;
+}
+.block-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px;
+  gap: 8px;
+  border-style: dashed;
+}
+.empty-icon {
+  font-size: 2rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+.empty-title {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.empty-hint {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  line-height: 1.45;
+  max-width: 28ch;
+}
+.empty-action { margin-top: 8px; width: 100%; max-width: 240px; }
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chip-fg, var(--jade-bright));
+  background: color-mix(in srgb, var(--chip-fg, var(--jade)) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--chip-fg, var(--jade)) 28%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
 }
 
 /* ── Form ─────────────────────────────────────────────────────────────── */

@@ -10,7 +10,7 @@
     variant?: 'hero' | 'thumb';
   }
 
-  let { id, category, name, variant = 'hero' }: Props = $props();
+  let { id, category, name: _name, variant = 'hero' }: Props = $props();
 
   const color = $derived(CAT_COLOR[category]);
   const icon = $derived(CAT_ICON[category]);
