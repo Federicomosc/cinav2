@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-06-29T19:33:18.316Z",
+  "cities": {
+    "chengdu": {
+      "hasMetro": true,
+      "stations": [],
+      "lines": [],
+      "error": "https://overpass.kumi.systems/api/interpreter → 429"
+    },
+    "chongqing": {
+      "hasMetro": true,
+      "stations": [],
+      "lines": [],
+      "error": "https://overpass.kumi.systems/api/interpreter → 429"
+    },
+    "pechino": {
+      "hasMetro": true,
+      "stations": [],
+      "lines": [],
+      "error": "https://overpass.kumi.systems/api/interpreter → 429"
+    },
+    "shanghai": {
+      "hasMetro": true,
+      "stations": [],
+      "lines": [],
+      "error": "https://overpass.kumi.systems/api/interpreter → 429"
+    },
+    "zhangjiajie": {
+      "hasMetro": false,
+      "note": "Nessuna metropolitana — bus, taxi e funivie per Zhangjiajie e Wulingyuan.",
+      "stations": [],
+      "lines": []
+    }
+  }
+}

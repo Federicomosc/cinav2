@@ -15,6 +15,7 @@
     "tiles:routing": "node scripts/download-routing-tiles.mjs",
     "tiles:all": "npm run tiles && npm run tiles:glyphs && npm run tiles:routing",
     "phrases:audio": "node scripts/generate-phrases-audio.mjs",
+    "metro:fetch": "node scripts/fetch-metro-data.mjs",
     "places:images": "node scripts/download-poi-images.mjs",
     "offline:verify": "node scripts/verify-offline-assets.mjs",
     "offline:prepare": "npm run offline:verify && npm run tiles:all && npm run phrases:audio && npm run build"

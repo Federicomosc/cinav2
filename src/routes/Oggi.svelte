@@ -16,6 +16,7 @@
   import { onMount } from 'svelte';
   import type { CityId } from '../data/types';
   import { cityTheme } from '../lib/city-theme';
+  import { theme, toggleNightMode } from '../lib/theme.svelte';
 
   const info = computeOggi(itinerario, transports);
   const city = $derived(info.leg ? cittaById.get(info.leg.city) : undefined);
@@ -89,7 +90,19 @@
       <div class="pre-inner">
         <div class="pre-meta">
           <time class="pre-today" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
-          <span class="pre-tag">Pre-partenza</span>
+          <div class="pre-meta-end">
+            <button
+              type="button"
+              class="night-toggle"
+              class:on={theme.nightMode}
+              onclick={toggleNightMode}
+              aria-pressed={theme.nightMode}
+              aria-label={theme.nightMode ? 'Disattiva modalità notte' : 'Attiva modalità notte'}
+            >
+              <span class="night-ic" aria-hidden="true">{theme.nightMode ? '🌙' : '☀️'}</span>
+            </button>
+            <span class="pre-tag">Pre-partenza</span>
+          </div>
         </div>
 
         <div class="pre-count-wrap">
@@ -134,7 +147,19 @@
           <p class="eyebrow">Dashboard</p>
           <h1 class="mast-h1">Oggi</h1>
         </div>
-        <time class="date-pill" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
+        <div class="mast-actions">
+          <button
+            type="button"
+            class="night-toggle"
+            class:on={theme.nightMode}
+            onclick={toggleNightMode}
+            aria-pressed={theme.nightMode}
+            aria-label={theme.nightMode ? 'Disattiva modalità notte' : 'Attiva modalità notte'}
+          >
+            <span class="night-ic" aria-hidden="true">{theme.nightMode ? '🌙' : '☀️'}</span>
+          </button>
+          <time class="date-pill" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
+        </div>
       </div>
       <div class="mast-foot">
         {#if info.phase === 'during'}
@@ -444,6 +469,38 @@
     justify-content: space-between;
     gap: 14px;
   }
+  .mast-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex: none;
+  }
+  .pre-meta-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .night-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: var(--paper-2);
+    color: var(--ink-body);
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .night-toggle.on {
+    background: color-mix(in srgb, var(--gold) 18%, var(--paper-2));
+    border-color: color-mix(in srgb, var(--gold) 45%, var(--line-strong));
+    box-shadow: 0 2px 10px var(--gold-soft);
+  }
+  .night-toggle:active { transform: scale(0.94); }
+  .night-ic { font-size: 1.05rem; line-height: 1; }
   .mast-titles { min-width: 0; }
   .mast-h1 {
     font-family: var(--serif);

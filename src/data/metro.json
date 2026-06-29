@@ -1,0 +1,138 @@
+{
+  "cities": {
+    "chengdu": {
+      "hasMetro": true,
+      "systemName": "Chengdu Metro",
+      "nameLocal": "成都地铁",
+      "stations": [
+        { "id": "cd-guangdu", "name": "Guangdu", "nameLocal": "广都", "lng": 104.0478, "lat": 30.5982, "lines": ["1"] },
+        { "id": "cd-century", "name": "Century City", "nameLocal": "世纪城", "lng": 104.0662, "lat": 30.5745, "lines": ["1"] },
+        { "id": "cd-sichuan-gym", "name": "Sichuan Gymnasium", "nameLocal": "省体育馆", "lng": 104.0665, "lat": 30.6312, "lines": ["1", "3"] },
+        { "id": "cd-tianfu", "name": "Tianfu Square", "nameLocal": "天府广场", "lng": 104.0663, "lat": 30.657, "lines": ["1", "2"] },
+        { "id": "cd-wenshu", "name": "Wenshu Monastery", "nameLocal": "文殊院", "lng": 104.0648, "lat": 30.6705, "lines": ["1"] },
+        { "id": "cd-north-rail", "name": "North Railway Station", "nameLocal": "火车北站", "lng": 104.0708, "lat": 30.722, "lines": ["1", "7"] },
+        { "id": "cd-xipu", "name": "Xipu", "nameLocal": "犀浦", "lng": 104.0421, "lat": 30.7589, "lines": ["2", "6"] },
+        { "id": "cd-people-park", "name": "People's Park", "nameLocal": "人民公园", "lng": 104.0618, "lat": 30.6703, "lines": ["2"], "nearPoi": "renmin-park" },
+        { "id": "cd-chunxi", "name": "Chunxi Road", "nameLocal": "春熙路", "lng": 104.0808, "lat": 30.6554, "lines": ["2", "3"] },
+        { "id": "cd-dongda", "name": "Dongda Road", "nameLocal": "东大路", "lng": 104.0965, "lat": 30.6489, "lines": ["2", "8"] },
+        { "id": "cd-wuhouci", "name": "Wuhouci", "nameLocal": "武侯祠", "lng": 104.0349, "lat": 30.6463, "lines": ["3"], "nearPoi": "jinli" },
+        { "id": "cd-tonghuimen", "name": "Tonghuimen", "nameLocal": "通惠门", "lng": 104.0562, "lat": 30.6693, "lines": ["3"], "nearPoi": "kuanzhai" },
+        { "id": "cd-panda-ave", "name": "Panda Avenue", "nameLocal": "熊猫大道", "lng": 104.1498, "lat": 30.7142, "lines": ["3"], "nearPoi": "panda-base" },
+        { "id": "cd-chengdu-east", "name": "Chengdu East", "nameLocal": "成都东客站", "lng": 104.141, "lat": 30.628, "lines": ["2", "7"] },
+        { "id": "cd-wenjiang", "name": "Wenjiang", "nameLocal": "温江", "lng": 103.856, "lat": 30.682, "lines": ["4"] },
+        { "id": "cd-qingjiang", "name": "Qingjiang Road", "nameLocal": "清江西路", "lng": 104.025, "lat": 30.668, "lines": ["4"] },
+        { "id": "cd-cultural-hall", "name": "Cultural Palace", "nameLocal": "文化宫", "lng": 104.052, "lat": 30.672, "lines": ["4", "7"] },
+        { "id": "cd-huagui", "name": "Huagui Road", "nameLocal": "华桂路", "lng": 103.978, "lat": 30.622, "lines": ["5"] },
+        { "id": "cd-jiaoda", "name": "Southwest Jiaotong", "nameLocal": "西南交大", "lng": 104.048, "lat": 30.698, "lines": ["5", "6"] },
+        { "id": "cd-chengdu-south", "name": "Chengdu South", "nameLocal": "成都南站", "lng": 104.068, "lat": 30.612, "lines": ["1", "5", "7"] }
+      ],
+      "lines": [
+        { "id": "1", "number": "1", "name": "Linea 1", "nameLocal": "1号线", "color": "#061098", "stationIds": ["cd-guangdu", "cd-century", "cd-sichuan-gym", "cd-tianfu", "cd-wenshu", "cd-north-rail"] },
+        { "id": "2", "number": "2", "name": "Linea 2", "nameLocal": "2号线", "color": "#FA4616", "stationIds": ["cd-xipu", "cd-people-park", "cd-tianfu", "cd-chunxi", "cd-dongda", "cd-chengdu-east"] },
+        { "id": "3", "number": "3", "name": "Linea 3", "nameLocal": "3号线", "color": "#D6026B", "stationIds": ["cd-wuhouci", "cd-sichuan-gym", "cd-tonghuimen", "cd-chunxi", "cd-panda-ave"] },
+        { "id": "4", "number": "4", "name": "Linea 4", "nameLocal": "4号线", "color": "#79BC43", "stationIds": ["cd-wenjiang", "cd-qingjiang", "cd-cultural-hall", "cd-tonghuimen"] },
+        { "id": "5", "number": "5", "name": "Linea 5", "nameLocal": "5号线", "color": "#90348D", "stationIds": ["cd-huagui", "cd-jiaoda", "cd-cultural-hall", "cd-chengdu-south", "cd-century"] },
+        { "id": "7", "number": "7", "name": "Linea 7", "nameLocal": "7号线", "color": "#69B92E", "stationIds": ["cd-north-rail", "cd-cultural-hall", "cd-chengdu-south", "cd-chengdu-east", "cd-north-rail"] }
+      ]
+    },
+    "chongqing": {
+      "hasMetro": true,
+      "systemName": "Chongqing Rail Transit",
+      "nameLocal": "重庆轨道交通",
+      "stations": [
+        { "id": "cq-chaotianmen", "name": "Chaotianmen", "nameLocal": "朝天门", "lng": 106.5894, "lat": 29.5667, "lines": ["1"], "nearPoi": "raffles" },
+        { "id": "cq-xiaoshizi", "name": "Xiaoshizi", "nameLocal": "小什字", "lng": 106.581, "lat": 29.562, "lines": ["1", "6"] },
+        { "id": "cq-jiefangbei", "name": "Jiefangbei", "nameLocal": "解放碑", "lng": 106.577, "lat": 29.557, "lines": ["1", "2"], "nearPoi": "bayi" },
+        { "id": "cq-lianglukou", "name": "Lianglukou", "nameLocal": "两路口", "lng": 106.564, "lat": 29.551, "lines": ["1", "3"] },
+        { "id": "cq-shapingba", "name": "Shapingba", "nameLocal": "沙坪坝", "lng": 106.456, "lat": 29.541, "lines": ["1"], "nearPoi": "ciqikou" },
+        { "id": "cq-jiaochangkou", "name": "Jiaochangkou", "nameLocal": "较场口", "lng": 106.578, "lat": 29.558, "lines": ["1", "2"] },
+        { "id": "cq-linjianglu", "name": "Linjianglu", "nameLocal": "临江门", "lng": 106.584, "lat": 29.5615, "lines": ["2"], "nearPoi": "hongya" },
+        { "id": "cq-liziba", "name": "Liziba", "nameLocal": "李子坝", "lng": 106.516, "lat": 29.555, "lines": ["2"], "nearPoi": "liziba" },
+        { "id": "cq-faping", "name": "Faping", "nameLocal": "佛坪", "lng": 106.505, "lat": 29.552, "lines": ["2"] },
+        { "id": "cq-erlang", "name": "Erlang", "nameLocal": "二郎", "lng": 106.468, "lat": 29.538, "lines": ["2"] },
+        { "id": "cq-yudong", "name": "Yudong", "nameLocal": "鱼洞", "lng": 106.52, "lat": 29.38, "lines": ["3"] },
+        { "id": "cq-guanyinqiao", "name": "Guanyinqiao", "nameLocal": "观音桥", "lng": 106.532, "lat": 29.575, "lines": ["3", "9"] },
+        { "id": "cq-daping", "name": "Daping", "nameLocal": "大坪", "lng": 106.518, "lat": 29.538, "lines": ["1", "2"] },
+        { "id": "cq-niujiaotuo", "name": "Niujiaotuo", "nameLocal": "牛角沱", "lng": 106.548, "lat": 29.553, "lines": ["2", "3"] },
+        { "id": "cq-ciqikou", "name": "Ciqikou", "nameLocal": "磁器口", "lng": 106.448, "lat": 29.58, "lines": ["1"], "nearPoi": "ciqikou" }
+      ],
+      "lines": [
+        { "id": "1", "number": "1", "name": "Linea 1", "nameLocal": "1号线", "color": "#E4002B", "stationIds": ["cq-chaotianmen", "cq-xiaoshizi", "cq-jiefangbei", "cq-lianglukou", "cq-shapingba", "cq-ciqikou"] },
+        { "id": "2", "number": "2", "name": "Linea 2", "nameLocal": "2号线", "color": "#007A33", "stationIds": ["cq-jiaochangkou", "cq-linjianglu", "cq-jiefangbei", "cq-niujiaotuo", "cq-liziba", "cq-faping", "cq-erlang"] },
+        { "id": "3", "number": "3", "name": "Linea 3", "nameLocal": "3号线", "color": "#003DA5", "stationIds": ["cq-yudong", "cq-lianglukou", "cq-niujiaotuo", "cq-guanyinqiao"] },
+        { "id": "6", "number": "6", "name": "Linea 6", "nameLocal": "6号线", "color": "#F67599", "stationIds": ["cq-chaotianmen", "cq-xiaoshizi", "cq-guanyinqiao"] }
+      ]
+    },
+    "zhangjiajie": {
+      "hasMetro": false,
+      "systemName": "Zhangjiajie",
+      "nameLocal": "张家界",
+      "note": "Nessuna metropolitana. Usa bus turistici, taxi/Didi e funivie per il parco nazionale e Tianmen.",
+      "stations": [],
+      "lines": []
+    },
+    "pechino": {
+      "hasMetro": true,
+      "systemName": "Beijing Subway",
+      "nameLocal": "北京地铁",
+      "stations": [
+        { "id": "bj-pingguoyuan", "name": "Pingguoyuan", "nameLocal": "苹果园", "lng": 116.183, "lat": 39.928, "lines": ["1"] },
+        { "id": "bj-xidan", "name": "Xidan", "nameLocal": "西单", "lng": 116.374, "lat": 39.908, "lines": ["1", "4"] },
+        { "id": "bj-tiananmen-w", "name": "Tiananmen West", "nameLocal": "天安门西", "lng": 116.391, "lat": 39.908, "lines": ["1"] },
+        { "id": "bj-tiananmen-e", "name": "Tiananmen East", "nameLocal": "天安门东", "lng": 116.401, "lat": 39.908, "lines": ["1"] },
+        { "id": "bj-wangfujing", "name": "Wangfujing", "nameLocal": "王府井", "lng": 116.417, "lat": 39.908, "lines": ["1"], "nearPoi": "forbidden-city" },
+        { "id": "bj-jianguomen", "name": "Jianguomen", "nameLocal": "建国门", "lng": 116.435, "lat": 39.908, "lines": ["1", "2"] },
+        { "id": "bj-xizhimen", "name": "Xizhimen", "nameLocal": "西直门", "lng": 116.355, "lat": 39.94, "lines": ["2", "4", "13"] },
+        { "id": "bj-yonghegong", "name": "Yonghegong", "nameLocal": "雍和宫", "lng": 116.4117, "lat": 39.9475, "lines": ["2", "5"], "nearPoi": "lama-temple" },
+        { "id": "bj-qianmen", "name": "Qianmen", "nameLocal": "前门", "lng": 116.397, "lat": 39.899, "lines": ["2"] },
+        { "id": "bj-chongwenmen", "name": "Chongwenmen", "nameLocal": "崇文门", "lng": 116.417, "lat": 39.899, "lines": ["2", "5"] },
+        { "id": "bj-tiantandongmen", "name": "Tiantandongmen", "nameLocal": "天坛东门", "lng": 116.412, "lat": 39.882, "lines": ["5"], "nearPoi": "temple-heaven" },
+        { "id": "bj-xuanwumen", "name": "Xuanwumen", "nameLocal": "宣武门", "lng": 116.374, "lat": 39.899, "lines": ["2", "4"] },
+        { "id": "bj-dongsi", "name": "Dongsi", "nameLocal": "东四", "lng": 116.417, "lat": 39.928, "lines": ["5", "6"] },
+        { "id": "bj-gulou", "name": "Guloudajie", "nameLocal": "鼓楼大街", "lng": 116.394, "lat": 39.948, "lines": ["2", "8"] },
+        { "id": "bj-olympic", "name": "Olympic Park", "nameLocal": "奥林匹克公园", "lng": 116.391, "lat": 40.002, "lines": ["8"] },
+        { "id": "bj-sanyuanqiao", "name": "Sanyuanqiao", "nameLocal": "三元桥", "lng": 116.456, "lat": 39.961, "lines": ["10", "机场线"] },
+        { "id": "bj-798", "name": "Jiangtai", "nameLocal": "将台", "lng": 116.495, "lat": 39.984, "lines": ["14"], "nearPoi": "798" },
+        { "id": "bj-summer-palace", "name": "Beigongmen", "nameLocal": "北宫门", "lng": 116.275, "lat": 40.0, "lines": ["4"], "nearPoi": "summer-palace" },
+        { "id": "bj-mutianyu-bus", "name": "Dongzhimen", "nameLocal": "东直门", "lng": 116.435, "lat": 39.941, "lines": ["2", "13"], "nearPoi": "mutianyu" }
+      ],
+      "lines": [
+        { "id": "1", "number": "1", "name": "Linea 1", "nameLocal": "1号线", "color": "#C23A30", "stationIds": ["bj-pingguoyuan", "bj-xidan", "bj-tiananmen-w", "bj-tiananmen-e", "bj-wangfujing", "bj-jianguomen"] },
+        { "id": "2", "number": "2", "name": "Linea 2", "nameLocal": "2号线", "color": "#009B6B", "stationIds": ["bj-xizhimen", "bj-gulou", "bj-yonghegong", "bj-dongsi", "bj-jianguomen", "bj-qianmen", "bj-xuanwumen", "bj-xizhimen"] },
+        { "id": "4", "number": "4", "name": "Linea 4", "nameLocal": "4号线", "color": "#6C1D7D", "stationIds": ["bj-xizhimen", "bj-xidan", "bj-xuanwumen", "bj-summer-palace"] },
+        { "id": "5", "number": "5", "name": "Linea 5", "nameLocal": "5号线", "color": "#A61D7F", "stationIds": ["bj-yonghegong", "bj-dongsi", "bj-chongwenmen", "bj-tiantandongmen"] },
+        { "id": "8", "number": "8", "name": "Linea 8", "nameLocal": "8号线", "color": "#0094D8", "stationIds": ["bj-gulou", "bj-olympic"] },
+        { "id": "14", "number": "14", "name": "Linea 14", "nameLocal": "14号线", "color": "#626020", "stationIds": ["bj-798", "bj-jianguomen"] }
+      ]
+    },
+    "shanghai": {
+      "hasMetro": true,
+      "systemName": "Shanghai Metro",
+      "nameLocal": "上海地铁",
+      "stations": [
+        { "id": "sh-xinzhuang", "name": "Xinzhuang", "nameLocal": "莘庄", "lng": 121.385, "lat": 31.111, "lines": ["1", "5"] },
+        { "id": "sh-peoples-square", "name": "People's Square", "nameLocal": "人民广场", "lng": 121.475, "lat": 31.231, "lines": ["1", "2", "8"] },
+        { "id": "sh-nanjing-road", "name": "East Nanjing Road", "nameLocal": "南京东路", "lng": 121.484, "lat": 31.238, "lines": ["2", "10"], "nearPoi": "bund" },
+        { "id": "sh-lujiazui", "name": "Lujiazui", "nameLocal": "陆家嘴", "lng": 121.505, "lat": 31.239, "lines": ["2"], "nearPoi": "shanghai-tower" },
+        { "id": "sh-yuyuan", "name": "Yuyuan Garden", "nameLocal": "豫园", "lng": 121.492, "lat": 31.227, "lines": ["10"], "nearPoi": "yu-garden" },
+        { "id": "sh-xujiahui", "name": "Xujiahui", "nameLocal": "徐家汇", "lng": 121.436, "lat": 31.195, "lines": ["1", "9", "11"] },
+        { "id": "sh-jingan", "name": "Jing'an Temple", "nameLocal": "静安寺", "lng": 121.448, "lat": 31.224, "lines": ["2", "7", "14"] },
+        { "id": "sh-hongqiao", "name": "Hongqiao Railway", "nameLocal": "虹桥火车站", "lng": 121.32, "lat": 31.194, "lines": ["2", "10", "17"] },
+        { "id": "sh-pudong-airport", "name": "Pudong Airport", "nameLocal": "浦东国际机场", "lng": 121.805, "lat": 31.144, "lines": ["2", "磁浮"] },
+        { "id": "sh-tianzifang", "name": "Dapuqiao", "nameLocal": "打浦桥", "lng": 121.466, "lat": 31.21, "lines": ["9"], "nearPoi": "french-concession" },
+        { "id": "sh-wujiaochang", "name": "Wujiaochang", "nameLocal": "五角场", "lng": 121.514, "lat": 31.299, "lines": ["10"] },
+        { "id": "sh-hongkou", "name": "Hongkou Football", "nameLocal": "虹口足球场", "lng": 121.481, "lat": 31.271, "lines": ["3", "8"] },
+        { "id": "sh-zhongshan-park", "name": "Zhongshan Park", "nameLocal": "中山公园", "lng": 121.417, "lat": 31.218, "lines": ["2", "3", "4"] },
+        { "id": "sh-longyang", "name": "Longyang Road", "nameLocal": "龙阳路", "lng": 121.557, "lat": 31.203, "lines": ["2", "7", "16", "18"] }
+      ],
+      "lines": [
+        { "id": "1", "number": "1", "name": "Linea 1", "nameLocal": "1号线", "color": "#E3002B", "stationIds": ["sh-xinzhuang", "sh-xujiahui", "sh-peoples-square"] },
+        { "id": "2", "number": "2", "name": "Linea 2", "nameLocal": "2号线", "color": "#82BF25", "stationIds": ["sh-hongqiao", "sh-zhongshan-park", "sh-jingan", "sh-peoples-square", "sh-nanjing-road", "sh-lujiazui", "sh-longyang", "sh-pudong-airport"] },
+        { "id": "7", "number": "7", "name": "Linea 7", "nameLocal": "7号线", "color": "#FF6900", "stationIds": ["sh-jingan", "sh-longyang"] },
+        { "id": "9", "number": "9", "name": "Linea 9", "nameLocal": "9号线", "color": "#87D300", "stationIds": ["sh-xujiahui", "sh-tianzifang"] },
+        { "id": "10", "number": "10", "name": "Linea 10", "nameLocal": "10号线", "color": "#C6AFD4", "stationIds": ["sh-hongqiao", "sh-yuyuan", "sh-nanjing-road", "sh-wujiaochang"] },
+        { "id": "14", "number": "14", "name": "Linea 14", "nameLocal": "14号线", "color": "#626020", "stationIds": ["sh-jingan", "sh-peoples-square"] }
+      ]
+    }
+  }
+}

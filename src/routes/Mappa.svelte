@@ -23,6 +23,13 @@
   import PageHeader from '../components/PageHeader.svelte';
   import PoiPhoto from '../components/PoiPhoto.svelte';
   import { cityTheme } from '../lib/city-theme';
+  import { metroForCity, metroGeoJSON, type MetroStation } from '../lib/metro';
+  import {
+    planMetroRoute,
+    filterMetroStations,
+    metroRouteInstructions,
+    type MetroRoutePlan,
+  } from '../lib/metro-route';
   import type { CityId, PoiCategory } from '../data/types';
 
   const LEGEND: PoiCategory[] = ['storico', 'moderno', 'natura', 'intrattenimento', 'cibo'];
@@ -35,7 +42,17 @@
   let tilesAvailable = $state(false);
   let routingOffline = $state(false);
   let geoNote = $state('');
-  let showRoute = $state(false);
+  type MapLayer = 'poi' | 'metro' | 'route';
+  let mapLayer = $state<MapLayer>('poi');
+  let metroLineFilter = $state<string>('all');
+  let metroQuery = $state('');
+  type MetroSheetTab = 'route' | 'list';
+  let metroSheetTab = $state<MetroSheetTab>('route');
+  let routeFromId = $state<string | null>(null);
+  let routeToId = $state<string | null>(null);
+  let routeFromQ = $state('');
+  let routeToQ = $state('');
+  let pickField = $state<'from' | 'to' | null>(null);
   let hideNames = $state(false);
   let mapReady = $state(false);
   let focusedPin: HTMLElement | null = null;
@@ -78,6 +95,55 @@
   const initialFocusId = nav.seg === 'mappa' ? nav.id : undefined;
   const initialPoi = initialFocusId ? poiById.get(initialFocusId) : undefined;
   let activeCity = $state<CityId>(initialPoi?.city ?? oggi.leg?.city ?? citta[0].id);
+
+  const metroData = $derived(metroForCity(activeCity));
+
+  const metroStationsFiltered = $derived.by(() => {
+    if (!metroData.hasMetro) return [] as MetroStation[];
+    let list: MetroStation[];
+    if (metroLineFilter === 'all') list = metroData.stations;
+    else {
+      const line = metroData.lines.find((l) => l.id === metroLineFilter);
+      if (!line) list = metroData.stations;
+      else {
+        const ids = new Set(line.stationIds);
+        list = metroData.stations.filter((s) => ids.has(s.id));
+      }
+    }
+    const q = metroQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.nameLocal.includes(q) ||
+        s.lines.some((n) => n.includes(q)),
+    );
+  });
+
+  const activeCityMeta = $derived(citta.find((c) => c.id === activeCity));
+
+  const routeFromPicks = $derived(
+    pickField === 'from' ? filterMetroStations(metroData.stations, routeFromQ) : [],
+  );
+  const routeToPicks = $derived(
+    pickField === 'to' ? filterMetroStations(metroData.stations, routeToQ) : [],
+  );
+
+  const metroRoutePlan = $derived.by((): MetroRoutePlan | null => {
+    if (!metroData.hasMetro || !routeFromId || !routeToId || routeFromId === routeToId) return null;
+    return planMetroRoute(metroData, routeFromId, routeToId);
+  });
+
+  const metroRouteSteps = $derived(metroRoutePlan ? metroRouteInstructions(metroRoutePlan) : []);
+
+  function resetMetroRoute() {
+    routeFromId = null;
+    routeToId = null;
+    routeFromQ = '';
+    routeToQ = '';
+    pickField = null;
+    clearMetroPlannedRoute();
+  }
 
   function center(c: CityId) {
     return citta.find((x) => x.id === c)!.center;
@@ -440,6 +506,8 @@
       setPoiVisibility(activeItin.stops.map((p) => p.id));
     } else if (navPlan && navDestPoi) {
       setPoiVisibility([navDestPoi.id]);
+    } else if (mapLayer === 'metro') {
+      setPoiVisibility([]);
     } else {
       setPoiVisibility(null);
     }
@@ -496,6 +564,8 @@
 
     map.on('load', () => {
       addRouteLayer();
+      ensureMetroLayers();
+      ensureMetroTripLayers();
       mapReady = true;
     });
     map.on('zoom', () => (hideNames = (map?.getZoom() ?? 11) < 8.5));
@@ -542,7 +612,7 @@
       id: 'route',
       type: 'line',
       source: 'route',
-      layout: { visibility: showRoute ? 'visible' : 'none', 'line-cap': 'round', 'line-join': 'round' },
+      layout: { visibility: mapLayer === 'route' ? 'visible' : 'none', 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#e4572e', 'line-width': 3, 'line-dasharray': [2, 1.5] },
     });
   }
@@ -573,6 +643,9 @@
 
   function flyTo(c: CityId) {
     activeCity = c;
+    metroLineFilter = 'all';
+    metroQuery = '';
+    resetMetroRoute();
     const ce = center(c);
     map?.flyTo({ center: [ce.lng, ce.lat], zoom: 12 });
   }
@@ -581,33 +654,281 @@
     if (userMarker && map) map.flyTo({ center: userMarker.getLngLat(), zoom: 14 });
   }
 
-  function toggleRoute() {
-    showRoute = !showRoute;
-    map?.setLayoutProperty('route', 'visibility', showRoute ? 'visible' : 'none');
+  function ensureMetroLayers() {
+    if (!map || map.getSource('metro-lines')) return;
+
+    map.addSource('metro-lines', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    map.addLayer({
+      id: 'metro-lines-casing',
+      type: 'line',
+      source: 'metro-lines',
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+      paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.28 },
+    });
+    map.addLayer({
+      id: 'metro-lines',
+      type: 'line',
+      source: 'metro-lines',
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+      paint: { 'line-color': ['get', 'color'], 'line-width': 5 },
+    });
+
+    map.addSource('metro-stations', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    map.addLayer({
+      id: 'metro-stations-ring',
+      type: 'circle',
+      source: 'metro-stations',
+      layout: { visibility: 'none' },
+      paint: { 'circle-radius': 8, 'circle-color': '#ffffff', 'circle-opacity': 0.85 },
+    });
+    map.addLayer({
+      id: 'metro-stations',
+      type: 'circle',
+      source: 'metro-stations',
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': 5.5,
+        'circle-color': ['get', 'color'],
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#ffffff',
+      },
+    });
+    map.addLayer({
+      id: 'metro-labels',
+      type: 'symbol',
+      source: 'metro-stations',
+      layout: {
+        visibility: 'none',
+        'text-field': ['get', 'nameLocal'],
+        'text-size': 10,
+        'text-offset': [0, 1.15],
+        'text-anchor': 'top',
+        'text-max-width': 9,
+        'text-font': ['Noto Sans Regular'],
+      },
+      paint: {
+        'text-color': '#f6efe4',
+        'text-halo-color': '#1a1410',
+        'text-halo-width': 1.2,
+      },
+    });
+
+    map.on('click', 'metro-stations', (e) => {
+      const f = e.features?.[0];
+      if (!f || f.geometry.type !== 'Point') return;
+      const [lng, lat] = f.geometry.coordinates as [number, number];
+      map?.flyTo({ center: [lng, lat], zoom: 15.5, duration: 700 });
+    });
+    map.on('mouseenter', 'metro-stations', () => {
+      if (map) map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'metro-stations', () => {
+      if (map) map.getCanvas().style.cursor = '';
+    });
   }
+
+  function setMetroVisibility(visible: boolean) {
+    if (!map) return;
+    const v = visible ? 'visible' : 'none';
+    for (const id of [
+      'metro-lines-casing',
+      'metro-lines',
+      'metro-stations-ring',
+      'metro-stations',
+      'metro-labels',
+    ]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
+    }
+  }
+
+  function setMapLayer(layer: MapLayer) {
+    mapLayer = layer;
+    if (layer !== 'metro') {
+      metroLineFilter = 'all';
+      metroQuery = '';
+      pickField = null;
+      clearMetroPlannedRoute();
+    }
+    map?.setLayoutProperty('route', 'visibility', layer === 'route' ? 'visible' : 'none');
+    mapEl?.classList.toggle('metro-mode', layer === 'metro');
+    refreshMetroLayers();
+  }
+
+  function selectRouteStation(field: 'from' | 'to', st: MetroStation) {
+    if (field === 'from') {
+      routeFromId = st.id;
+      routeFromQ = `${st.nameLocal} · ${st.name}`;
+    } else {
+      routeToId = st.id;
+      routeToQ = `${st.nameLocal} · ${st.name}`;
+    }
+    pickField = null;
+  }
+
+  function swapRouteEnds() {
+    const fid = routeFromId;
+    const tid = routeToId;
+    const fq = routeFromQ;
+    const tq = routeToQ;
+    routeFromId = tid;
+    routeToId = fid;
+    routeFromQ = tq;
+    routeToQ = fq;
+  }
+
+  function ensureMetroTripLayers() {
+    if (!map || map.getSource('metro-trip')) return;
+    const empty = {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: { type: 'LineString' as const, coordinates: [] as [number, number][] },
+    };
+    map.addSource('metro-trip', { type: 'geojson', data: empty });
+    map.addLayer({
+      id: 'metro-trip-casing',
+      type: 'line',
+      source: 'metro-trip',
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+      paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-opacity': 0.45 },
+    });
+    map.addLayer({
+      id: 'metro-trip-line',
+      type: 'line',
+      source: 'metro-trip',
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+      paint: { 'line-color': '#ffd54a', 'line-width': 5.5 },
+    });
+  }
+
+  function drawMetroPlannedRoute(plan: MetroRoutePlan) {
+    if (!map) return;
+    ensureMetroTripLayers();
+    const coords = plan.path.map((s) => [s.lng, s.lat] as [number, number]);
+    const data = {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: { type: 'LineString' as const, coordinates: coords },
+    };
+    const src = map.getSource('metro-trip');
+    if (src && 'setData' in src) (src as { setData: (d: unknown) => void }).setData(data);
+    map.setLayoutProperty('metro-trip-casing', 'visibility', 'visible');
+    map.setLayoutProperty('metro-trip-line', 'visibility', 'visible');
+
+    let minLng = coords[0][0];
+    let maxLng = coords[0][0];
+    let minLat = coords[0][1];
+    let maxLat = coords[0][1];
+    for (const [lng, lat] of coords) {
+      minLng = Math.min(minLng, lng);
+      maxLng = Math.max(maxLng, lng);
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+    }
+    map.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      { padding: { top: 48, bottom: 220, left: 36, right: 36 }, duration: 900, maxZoom: 14 },
+    );
+  }
+
+  function clearMetroPlannedRoute() {
+    if (!map) return;
+    if (map.getSource('metro-trip')) {
+      const src = map.getSource('metro-trip');
+      if (src && 'setData' in src) {
+        (src as { setData: (d: unknown) => void }).setData({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: [] },
+        });
+      }
+    }
+    if (map.getLayer('metro-trip-line')) map.setLayoutProperty('metro-trip-line', 'visibility', 'none');
+    if (map.getLayer('metro-trip-casing')) map.setLayoutProperty('metro-trip-casing', 'visibility', 'none');
+  }
+
+  function stationLineColor(st: MetroStation): string {
+    const line = metroData.lines.find((l) => l.stationIds.includes(st.id));
+    return line?.color ?? '#888';
+  }
+
+  function refreshMetroLayers() {
+    if (!map) return;
+    ensureMetroLayers();
+    if (mapLayer !== 'metro') {
+      setMetroVisibility(false);
+      return;
+    }
+    const geo = metroGeoJSON(activeCity, metroLineFilter);
+    const linesSrc = map.getSource('metro-lines');
+    const stSrc = map.getSource('metro-stations');
+    if (linesSrc && 'setData' in linesSrc) {
+      (linesSrc as { setData: (d: unknown) => void }).setData(geo.lines);
+    }
+    if (stSrc && 'setData' in stSrc) {
+      (stSrc as { setData: (d: unknown) => void }).setData(geo.stations);
+    }
+    setMetroVisibility(true);
+  }
+
+  function flyToMetroStation(st: MetroStation) {
+    if (!map) return;
+    if (mapLayer !== 'metro') setMapLayer('metro');
+    map.flyTo({ center: [st.lng, st.lat], zoom: 15.5, duration: 800 });
+  }
+
+  $effect(() => {
+    if (!mapReady || mapLayer !== 'metro') return;
+    if (metroRoutePlan) drawMetroPlannedRoute(metroRoutePlan);
+    else clearMetroPlannedRoute();
+  });
+
+  $effect(() => {
+    if (!mapReady) return;
+    activeCity;
+    metroLineFilter;
+    mapLayer;
+    refreshMetroLayers();
+  });
 </script>
 
 <div class="mappa-page" class:itin-mode={!!activeItin}>
-<PageHeader eyebrow="◎ offline" title="Mappa" sub="POI, posizione GPS e percorsi a piedi." />
+<PageHeader eyebrow="◎ offline" title="Mappa" sub={mapLayer === 'metro' ? 'Rete metropolitana offline.' : mapLayer === 'route' ? 'Collegamenti tra le tappe del viaggio.' : 'Luoghi, GPS e percorsi a piedi.'} />
 
 {#if !activeItin}
-<div class="topbar">
-  <div class="cities">
-    {#each citta as c (c.id)}
-      {@const th = cityTheme(c.id)}
-      <button
-        class="city"
-        class:on={activeCity === c.id}
-        style={activeCity === c.id ? `--c:${th.accent}` : undefined}
-        onclick={() => flyTo(c.id)}
-      >{th.icon} {c.name}</button>
-    {/each}
+  <div class="map-toolbar">
+    <div class="cities" role="tablist" aria-label="Città">
+      {#each citta as c (c.id)}
+        {@const th = cityTheme(c.id)}
+        <button
+          type="button"
+          class="city"
+          class:on={activeCity === c.id}
+          style={activeCity === c.id ? `--c:${th.accent}` : undefined}
+          role="tab"
+          aria-selected={activeCity === c.id}
+          onclick={() => flyTo(c.id)}
+        >{c.name}</button>
+      {/each}
+    </div>
+    <div class="layer-tabs" role="tablist" aria-label="Vista mappa">
+      <button type="button" class="layer-tab" class:on={mapLayer === 'poi'} role="tab" aria-selected={mapLayer === 'poi'} onclick={() => setMapLayer('poi')}>POI</button>
+      <button type="button" class="layer-tab" class:on={mapLayer === 'metro'} role="tab" aria-selected={mapLayer === 'metro'} onclick={() => setMapLayer('metro')}>Metro</button>
+      <button type="button" class="layer-tab" class:on={mapLayer === 'route'} role="tab" aria-selected={mapLayer === 'route'} onclick={() => setMapLayer('route')}>Tappe</button>
+    </div>
   </div>
-</div>
 {/if}
 
-<div class="map-wrap" class:has-itin={!!activeItin} bind:this={mapWrapEl}>
-  <div class="map" class:hide-names={hideNames} class:itin-open={!!activeItin} class:route-focus={!!activeItin || !!navPlan} bind:this={mapEl}></div>
+<div class="map-stage" class:has-itin={!!activeItin} bind:this={mapWrapEl}>
+  <div class="map" class:hide-names={hideNames || mapLayer === 'metro'} class:itin-open={!!activeItin} class:route-focus={!!activeItin || !!navPlan} class:metro-mode={mapLayer === 'metro'} bind:this={mapEl}></div>
 
   {#if activeItin}
     <aside
@@ -752,36 +1073,126 @@
     </aside>
   {/if}
 
-  <div class="controls" class:itin-controls={!!activeItin}>
-    {#if !activeItin}<button class="ctrl" onclick={toggleRoute} class:on={showRoute}>Tappe</button>{/if}
-    <button class="ctrl" onclick={recenter}>◎ Posizione</button>
+  {#if !activeItin && !navDestPoi && mapLayer === 'metro'}
+    <aside class="metro-sheet" class:route-tab={metroSheetTab === 'route'} aria-label="Metro {activeCityMeta?.name}">
+      {#if !metroData.hasMetro}
+        <p class="metro-empty">{metroData.note}</p>
+      {:else}
+        <div class="metro-sheet-tabs" role="tablist" aria-label="Modalità metro">
+          <button type="button" class="m-tab" class:on={metroSheetTab === 'route'} role="tab" aria-selected={metroSheetTab === 'route'} onclick={() => (metroSheetTab = 'route')}>Percorso</button>
+          <button type="button" class="m-tab" class:on={metroSheetTab === 'list'} role="tab" aria-selected={metroSheetTab === 'list'} onclick={() => (metroSheetTab = 'list')}>Fermate</button>
+        </div>
+
+        {#if metroSheetTab === 'route'}
+          <div class="route-fields">
+            <label class="route-field">
+              <span class="route-lbl">Da</span>
+              <input
+                class="metro-search"
+                type="search"
+                placeholder="Stazione di partenza…"
+                bind:value={routeFromQ}
+                onfocus={() => (pickField = 'from')}
+              />
+              {#if routeFromPicks.length}
+                <ul class="route-picks">
+                  {#each routeFromPicks as st (st.id)}
+                    <li><button type="button" class="route-pick" onclick={() => selectRouteStation('from', st)}>{st.nameLocal} · {st.name}</button></li>
+                  {/each}
+                </ul>
+              {/if}
+            </label>
+            <button type="button" class="route-swap" onclick={swapRouteEnds} aria-label="Inverti partenza e arrivo">⇅</button>
+            <label class="route-field">
+              <span class="route-lbl">A</span>
+              <input
+                class="metro-search"
+                type="search"
+                placeholder="Stazione di arrivo…"
+                bind:value={routeToQ}
+                onfocus={() => (pickField = 'to')}
+              />
+              {#if routeToPicks.length}
+                <ul class="route-picks">
+                  {#each routeToPicks as st (st.id)}
+                    <li><button type="button" class="route-pick" onclick={() => selectRouteStation('to', st)}>{st.nameLocal} · {st.name}</button></li>
+                  {/each}
+                </ul>
+              {/if}
+            </label>
+          </div>
+
+          {#if routeFromId && routeToId && routeFromId === routeToId}
+            <p class="route-err">Partenza e arrivo devono essere diverse.</p>
+          {:else if routeFromId && routeToId && !metroRoutePlan}
+            <p class="route-err">Nessun collegamento metro tra queste due fermate nei dati offline.</p>
+          {:else if metroRoutePlan}
+            <div class="route-summary">
+              <span class="route-meta">{metroRoutePlan.stops} fermate{#if metroRoutePlan.transfers} · {metroRoutePlan.transfers} {metroRoutePlan.transfers === 1 ? 'cambio' : 'cambi'}{/if}</span>
+            </div>
+            <ol class="route-steps">
+              {#each metroRouteSteps as step, i (i)}
+                <li class="route-step">{step}</li>
+              {/each}
+            </ol>
+          {:else}
+            <p class="route-hint">Scegli due stazioni per sapere quali linee prendere.</p>
+          {/if}
+        {:else}
+          <input class="metro-search" type="search" placeholder="Cerca fermata…" bind:value={metroQuery} />
+          <div class="metro-line-row">
+            <button type="button" class="m-line" class:on={metroLineFilter === 'all'} onclick={() => (metroLineFilter = 'all')}>Tutte</button>
+            {#each metroData.lines as line (line.id)}
+              <button
+                type="button"
+                class="m-line"
+                class:on={metroLineFilter === line.id}
+                style="--lc:{line.color}"
+                onclick={() => (metroLineFilter = line.id)}
+                title={line.nameLocal}
+              >{line.number}</button>
+            {/each}
+          </div>
+          <ul class="metro-rows">
+            {#each metroStationsFiltered as st (st.id)}
+              <li>
+                <button type="button" class="m-row" onclick={() => flyToMetroStation(st)}>
+                  <span class="m-dot" style="background:{stationLineColor(st)}"></span>
+                  <span class="m-label">
+                    <span class="m-hanzi">{st.nameLocal}</span>
+                    <span class="m-it">{st.name}</span>
+                  </span>
+                  {#if st.nearPoi}<span class="m-poi">POI</span>{/if}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {/if}
+    </aside>
+  {/if}
+
+  <button type="button" class="gps-fab" onclick={recenter} aria-label="Centra sulla posizione">◎</button>
+</div>
+
+{#if !activeItin && mapLayer === 'poi'}
+  <div class="legend">
+    {#each LEGEND as cat (cat)}
+      <span class="lg"><span class="lg-ic" style="border-color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>{CAT_LABEL[cat]}</span>
+    {/each}
   </div>
-</div>
-
-{#if !activeItin}
-<div class="legend">
-  {#each LEGEND as cat (cat)}
-    <span class="lg"><span class="lg-ic" style="border-color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>{CAT_LABEL[cat]}</span>
-  {/each}
-</div>
 {/if}
 
-{#if !activeItin}
-{#if tilesAvailable}
-  <p class="banner ok">
-    {#if !online.network}✈️ Offline · {:else}✓ {/if}
-    Mappa locale installata
-    {#if routingOffline} · percorsi pedonali offline{/if}
-  </p>
-{:else}
-  <p class="banner warn">
-    🌐 Mappa online — genera i tile con <code>npm run tiles:all</code> prima di partire.
-  </p>
-{/if}
-{#if !routingOffline && tilesAvailable}
-  <p class="banner hint">Percorsi stradali: esegui <code>npm run tiles:routing</code> per il routing offline.</p>
-{/if}
-{#if geoNote}<p class="banner">{geoNote}</p>{/if}
+{#if !activeItin && mapLayer === 'poi'}
+  {#if tilesAvailable}
+    <p class="banner ok compact">
+      {#if !online.network}✈️ Offline{:else}✓{/if}
+      · mappa locale{#if routingOffline} · routing{/if}
+    </p>
+  {:else}
+    <p class="banner warn compact">🌐 Mappa online — <code>npm run tiles:all</code></p>
+  {/if}
+  {#if geoNote}<p class="banner compact">{geoNote}</p>{/if}
 {/if}
 </div>
 
@@ -793,38 +1204,334 @@
   .mappa-page.itin-mode :global(.ph .sub) {
     display: none;
   }
-  .topbar { margin: -6px -4px 12px; }
-  .cities { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  .map-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .cities { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
   .cities::-webkit-scrollbar { display: none; }
   .city {
     flex: none;
     font-family: var(--mono);
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 600;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-pill);
-    padding: 7px 14px;
+    padding: 7px 13px;
     background: var(--surface);
     color: var(--ink-faint);
-    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
   .city.on {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--c, var(--jade)) 88%, #000) 0%, var(--c, var(--jade)) 100%);
+    background: color-mix(in srgb, var(--c, var(--jade)) 90%, #000);
     color: #fff;
     border-color: var(--c, var(--jade));
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--c, var(--jade)) 35%, transparent);
   }
-  .city:active { transform: scale(0.97); }
-  .map-wrap { position: relative; }
-  .map-wrap.has-itin { margin-top: -4px; }
+  .layer-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 4px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+  }
+  .layer-tab {
+    padding: 8px 6px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .layer-tab.on {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .map-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+  .map-stage.has-itin { margin-top: -4px; }
   .map {
     width: 100%;
-    height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 200px);
-    min-height: 300px;
+    height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 132px);
+    min-height: 340px;
     border-radius: var(--radius-md);
     overflow: hidden;
     border: 1px solid var(--line-strong);
     box-shadow: var(--shadow-md);
+  }
+  .map.metro-mode :global(.poi-pin) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .gps-fab {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 4;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: rgba(12, 9, 7, 0.9);
+    backdrop-filter: blur(10px);
+    color: var(--ink-soft);
+    font-size: 17px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metro-sheet {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 5;
+    max-height: 38%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(12, 9, 7, 0.93);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+  }
+  .metro-sheet.route-tab {
+    max-height: 52%;
+  }
+  .metro-sheet-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 3px;
+    background: var(--paper-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    flex: none;
+  }
+  .m-tab {
+    padding: 7px 8px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-faint);
+  }
+  .m-tab.on {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .route-fields {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 6px;
+    align-items: start;
+    flex: none;
+  }
+  .route-field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .route-lbl {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .route-swap {
+    align-self: end;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 2px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .route-picks {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 2px);
+    z-index: 8;
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    max-height: min(220px, 40vh);
+    overflow-y: auto;
+  }
+  .route-pick {
+    width: 100%;
+    text-align: left;
+    padding: 8px 8px;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: none;
+    color: var(--ink);
+    font-size: 0.8rem;
+  }
+  .route-pick:active { background: var(--paper-2); }
+  .route-summary { flex: none; }
+  .route-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+  }
+  .route-steps {
+    margin: 0;
+    padding: 0 0 0 18px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .route-step {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--ink-body);
+    margin-bottom: 8px;
+  }
+  .route-hint, .route-err {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--ink-faint);
+  }
+  .route-err { color: var(--cinabro-bright); }
+  .metro-empty {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--ink-faint);
+  }
+  .metro-sheet-top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: none;
+  }
+  .metro-sheet-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .metro-search {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.88rem;
+  }
+  .metro-line-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: none;
+  }
+  .metro-line-row::-webkit-scrollbar { display: none; }
+  .m-line {
+    flex: none;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: var(--radius-pill);
+    border: 2px solid var(--lc, var(--line-strong));
+    background: color-mix(in srgb, var(--lc, var(--surface)) 20%, var(--surface));
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .m-line.on {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--lc, var(--gold));
+  }
+  .metro-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .m-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: inherit;
+    text-align: left;
+  }
+  .m-row:last-child { border-bottom: none; }
+  .m-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .m-label {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .m-hanzi {
+    font-family: var(--hanzi);
+    font-size: 1rem;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .m-it {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .m-poi {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--jade-bright);
   }
   .map.itin-open {
     height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 108px);
@@ -1154,36 +1861,7 @@
     font-size: 1.1rem;
   }
 
-  .controls { display: flex; gap: 10px; margin-top: 8px; }
-  .controls.itin-controls {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 4;
-    margin: 0;
-  }
-  .controls.itin-controls .ctrl {
-    background: rgba(10, 8, 6, 0.88);
-    backdrop-filter: blur(8px);
-    box-shadow: var(--shadow-sm);
-  }
-  .ctrl {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-pill);
-    padding: 8px 14px;
-    background: var(--surface);
-    color: var(--ink-soft);
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .ctrl.on {
-    background: var(--cinabro);
-    color: #fff;
-    border-color: var(--cinabro);
-    box-shadow: 0 4px 12px var(--cinabro-glow);
-  }
+
   .banner {
     margin-top: 10px;
     font-size: 0.78rem;
@@ -1200,10 +1878,14 @@
     border-color: rgba(61, 154, 106, 0.35);
   }
   .banner.warn { color: var(--cinabro-bright); background: var(--cinabro-soft); }
-  .banner.hint { margin-top: 6px; }
+  .banner.compact {
+    margin-top: 8px;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
   .banner code { font-family: var(--mono); font-size: 0.9em; color: var(--cinabro-bright); }
 
-  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
   .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
   .lg-ic {
     width: 22px;

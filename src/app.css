@@ -51,7 +51,57 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  color-scheme: dark;
+
+  --nav-shell-fade: rgba(12, 9, 7, 0.92);
+  --nav-shell-bar: rgba(22, 17, 13, 0.92);
+  --nav-shell-inset: rgba(255, 255, 255, 0.06);
+  --ambient-vignette: rgba(0, 0, 0, 0.45);
+  --ambient-noise: 0.22;
+}
+
+html[data-theme="day"] {
+  color-scheme: light;
+
+  --paper: #f5f0e8;
+  --paper-2: #ebe4d8;
+  --surface: #fffdf9;
+  --surface-hi: #f8f4ec;
+  --surface-elevated: #ffffff;
+  --overlay: #e5ddd2;
+
+  --ink: #1a1410;
+  --ink-soft: #3d342c;
+  --ink-body: #524840;
+  --ink-faint: #7a6f63;
+  --line: rgba(26, 20, 16, 0.08);
+  --line-strong: rgba(26, 20, 16, 0.14);
+
+  --cinabro: #c93a1e;
+  --cinabro-bright: #e84828;
+  --cinabro-soft: rgba(201, 58, 30, 0.1);
+  --cinabro-glow: rgba(201, 58, 30, 0.22);
+
+  --jade: #2d8a5e;
+  --jade-bright: #3fa87a;
+  --jade-soft: rgba(45, 138, 94, 0.1);
+
+  --gold: #b8862e;
+  --gold-soft: rgba(184, 134, 46, 0.12);
+
+  --shadow-sm: 0 1px 3px rgba(26, 20, 16, 0.07);
+  --shadow-md:
+    0 2px 8px rgba(26, 20, 16, 0.08),
+    0 12px 32px rgba(26, 20, 16, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-lg:
+    0 4px 16px rgba(26, 20, 16, 0.1),
+    0 24px 56px rgba(26, 20, 16, 0.08);
+
+  --nav-shell-fade: rgba(245, 240, 232, 0.92);
+  --nav-shell-bar: rgba(255, 252, 247, 0.94);
+  --nav-shell-inset: rgba(255, 255, 255, 0.9);
+  --ambient-vignette: rgba(255, 255, 255, 0.42);
+  --ambient-noise: 0.1;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -60,6 +110,10 @@ html {
   -webkit-text-size-adjust: 100%;
   color-scheme: dark;
   height: 100%;
+}
+
+html[data-theme="day"] {
+  color-scheme: light;
 }
 
 body {
@@ -110,14 +164,14 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 130% 90% at 50% 110%, rgba(0, 0, 0, 0.45) 0%, transparent 55%);
+  background: radial-gradient(ellipse 130% 90% at 50% 110%, var(--ambient-vignette) 0%, transparent 55%);
   pointer-events: none;
 }
 .app-ambient::after {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.22;
+  opacity: var(--ambient-noise);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   background-size: 180px 180px;
   mix-blend-mode: overlay;

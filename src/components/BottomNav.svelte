@@ -6,14 +6,13 @@
     { route: 'citta', label: 'Città' },
     { route: 'logistica', label: 'Viaggio' },
     { route: 'mappa', label: 'Mappa' },
-    { route: 'documenti', label: 'Documenti' },
     { route: 'album', label: 'Album' },
   ];
 
   const activeTab: Tab = $derived(
     nav.seg === 'poi'
       ? 'citta'
-      : nav.seg === 'frasario' || nav.seg === 'spese' || nav.seg === 'emergenze'
+      : nav.seg === 'frasario' || nav.seg === 'spese' || nav.seg === 'emergenze' || nav.seg === 'documenti'
         ? 'oggi'
         : isTab(nav.seg)
           ? nav.seg
@@ -63,7 +62,7 @@
     display: flex;
     justify-content: center;
     padding: 6px 12px 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(12, 9, 7, 0.92) 35%);
+    background: linear-gradient(180deg, transparent 0%, var(--nav-shell-fade) 35%);
     pointer-events: none;
   }
   .nav-inner {
@@ -74,7 +73,7 @@
     max-width: 456px;
     min-height: calc(var(--nav-h) + var(--safe-bottom));
     padding-bottom: var(--safe-bottom);
-    background: rgba(22, 17, 13, 0.92);
+    background: var(--nav-shell-bar);
     backdrop-filter: saturate(1.6) blur(24px);
     -webkit-backdrop-filter: saturate(1.6) blur(24px);
     border: 1px solid var(--line-strong);
@@ -82,7 +81,7 @@
     border-radius: 22px 22px 0 0;
     box-shadow:
       var(--shadow-lg),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 1px 0 var(--nav-shell-inset),
       0 -8px 32px rgba(232, 72, 40, 0.06);
     overflow-x: auto;
     scrollbar-width: none;
