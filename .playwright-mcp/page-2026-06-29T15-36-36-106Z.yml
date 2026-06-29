@@ -1,0 +1,149 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - generic [ref=e305]:
+      - generic [ref=e306]:
+        - paragraph [ref=e307]: Agenda · 20 giorni
+        - heading "Il viaggio" [level=1] [ref=e308]
+        - paragraph [ref=e309]: Un giorno alla volta — scorri i numeri o usa le frecce.
+      - complementary [ref=e310]:
+        - generic [ref=e311]:
+          - generic [ref=e312]: Budget viaggio
+          - text: € 5364,44
+          - generic [ref=e313]: € 1341,11 a persona · 4 viaggiatori
+        - generic [ref=e314]:
+          - generic [ref=e315]: Chengdu 1n
+          - generic [ref=e316]: Chongqing 4n
+          - generic [ref=e317]: Wulingyuan 1n
+          - generic [ref=e318]: Zhangjiajie 2n
+          - generic [ref=e319]: Pechino 5n
+          - generic [ref=e320]: Shanghai 4n
+      - navigation "Navigazione giorni" [ref=e321]:
+        - button "Giorno precedente" [disabled] [ref=e322] [cursor=pointer]: ‹
+        - generic [ref=e323]:
+          - button "Giorno 1, 30 lug" [ref=e324] [cursor=pointer]:
+            - generic [ref=e325]: "1"
+            - generic [ref=e326]: 30 lug
+          - button "Giorno 2, 31 lug" [ref=e327] [cursor=pointer]:
+            - generic [ref=e328]: "2"
+            - generic [ref=e329]: 31 lug
+          - button "Giorno 3, 01 ago" [ref=e330] [cursor=pointer]:
+            - generic [ref=e331]: "3"
+            - generic [ref=e332]: 01 ago
+          - button "Giorno 4, 02 ago" [ref=e333] [cursor=pointer]:
+            - generic [ref=e334]: "4"
+            - generic [ref=e335]: 02 ago
+          - button "Giorno 5, 03 ago" [ref=e336] [cursor=pointer]:
+            - generic [ref=e337]: "5"
+            - generic [ref=e338]: 03 ago
+          - button "Giorno 6, 04 ago" [ref=e339] [cursor=pointer]:
+            - generic [ref=e340]: "6"
+            - generic [ref=e341]: 04 ago
+          - button "Giorno 7, 05 ago" [ref=e342] [cursor=pointer]:
+            - generic [ref=e343]: "7"
+            - generic [ref=e344]: 05 ago
+          - button "Giorno 8, 06 ago" [ref=e345] [cursor=pointer]:
+            - generic [ref=e346]: "8"
+            - generic [ref=e347]: 06 ago
+          - button "Giorno 9, 07 ago" [ref=e348] [cursor=pointer]:
+            - generic [ref=e349]: "9"
+            - generic [ref=e350]: 07 ago
+          - button "Giorno 10, 08 ago" [ref=e351] [cursor=pointer]:
+            - generic [ref=e352]: "10"
+            - generic [ref=e353]: 08 ago
+          - button "Giorno 11, 09 ago" [ref=e354] [cursor=pointer]:
+            - generic [ref=e355]: "11"
+            - generic [ref=e356]: 09 ago
+          - button "Giorno 12, 10 ago" [ref=e357] [cursor=pointer]:
+            - generic [ref=e358]: "12"
+            - generic [ref=e359]: 10 ago
+          - button "Giorno 13, 11 ago" [ref=e360] [cursor=pointer]:
+            - generic [ref=e361]: "13"
+            - generic [ref=e362]: 11 ago
+          - button "Giorno 14, 12 ago" [ref=e363] [cursor=pointer]:
+            - generic [ref=e364]: "14"
+            - generic [ref=e365]: 12 ago
+          - button "Giorno 15, 13 ago" [ref=e366] [cursor=pointer]:
+            - generic [ref=e367]: "15"
+            - generic [ref=e368]: 13 ago
+          - button "Giorno 16, 14 ago" [ref=e369] [cursor=pointer]:
+            - generic [ref=e370]: "16"
+            - generic [ref=e371]: 14 ago
+          - button "Giorno 17, 15 ago" [ref=e372] [cursor=pointer]:
+            - generic [ref=e373]: "17"
+            - generic [ref=e374]: 15 ago
+          - button "Giorno 18, 16 ago" [ref=e375] [cursor=pointer]:
+            - generic [ref=e376]: "18"
+            - generic [ref=e377]: 16 ago
+          - button "Giorno 19, 17 ago" [ref=e378] [cursor=pointer]:
+            - generic [ref=e379]: "19"
+            - generic [ref=e380]: 17 ago
+          - button "Giorno 20, 18 ago" [ref=e381] [cursor=pointer]:
+            - generic [ref=e382]: "20"
+            - generic [ref=e383]: 18 ago
+        - button "Giorno successivo" [ref=e384] [cursor=pointer]: ›
+      - article [ref=e385]:
+        - generic [ref=e387]:
+          - generic [ref=e389]: GIO · Giorno 1 · 30 lug
+          - generic [ref=e390]:
+            - generic [ref=e391]: ✈️
+            - generic [ref=e392]: In viaggio
+            - generic [ref=e393]: 行
+          - heading "Volo per la Cina" [level=2] [ref=e394]
+        - generic [ref=e395]:
+          - generic [ref=e396]: ✈
+          - generic [ref=e397]:
+            - text: CA446 · MXP · Milano Malpensa T1 → TFU · Chengdu Tianfu T1
+            - generic [ref=e398]: 13:00
+        - generic [ref=e399]:
+          - heading "Orari giornata" [level=3] [ref=e400]
+          - generic [ref=e401]:
+            - generic [ref=e402]:
+              - generic [ref=e403]: Pranzo
+              - generic [ref=e404]: Volo
+            - generic [ref=e405]:
+              - generic [ref=e406]: Pomeriggio
+              - generic [ref=e407]: Volo
+            - generic [ref=e408]:
+              - generic [ref=e409]: Cena
+              - generic [ref=e410]: Volo
+            - generic [ref=e411]:
+              - generic [ref=e412]: Sera
+              - generic [ref=e413]: Volo
+            - generic [ref=e414]:
+              - generic [ref=e415]: Dormi a
+              - generic [ref=e416]: Volo
+        - generic [ref=e417]:
+          - generic [ref=e418]:
+            - heading "Cosa facciamo" [level=3] [ref=e419]
+            - generic [ref=e420]: 0/1
+          - list [ref=e421]:
+            - listitem [ref=e422]:
+              - button "Segna fatto" [ref=e423] [cursor=pointer]
+              - generic [ref=e426]: Volo MXP → Chengdu · CA446
+        - generic [ref=e427]: "Costo stimato: € 1903,68 · € 475,92 a persona"
+        - generic [ref=e428]:
+          - button "← Ieri" [disabled] [ref=e429] [cursor=pointer]
+          - generic [ref=e430]: 1 / 20
+          - button "Domani →" [ref=e431] [cursor=pointer]
+      - group [ref=e432]:
+        - generic "Vedi tutti i 20 giorni" [ref=e433] [cursor=pointer]
+  - navigation "Navigazione principale" [ref=e67]:
+    - generic [ref=e68]:
+      - button "Oggi" [ref=e69] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e73]: Oggi
+      - button "Città" [active] [ref=e75] [cursor=pointer]:
+        - img [ref=e77]
+        - generic [ref=e79]: Città
+      - button "Viaggio" [ref=e80] [cursor=pointer]:
+        - img [ref=e82]
+        - generic [ref=e84]: Viaggio
+      - button "Mappa" [ref=e85] [cursor=pointer]:
+        - img [ref=e87]
+        - generic [ref=e89]: Mappa
+      - button "Docs" [ref=e90] [cursor=pointer]:
+        - img [ref=e92]
+        - generic [ref=e94]: Docs
+      - button "Album" [ref=e95] [cursor=pointer]:
+        - img [ref=e97]
+        - generic [ref=e99]: Album

@@ -1,0 +1,129 @@
+[
+  {
+    "cat": "base",
+    "it": "Ciao / Salve",
+    "pinyin": "Nǐ hǎo",
+    "hanzi": "你好",
+    "audio": "01-你好.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Grazie",
+    "pinyin": "Xièxie",
+    "hanzi": "谢谢",
+    "audio": "02-谢谢.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Scusi / Mi scusi",
+    "pinyin": "Bù hǎo yìsi",
+    "hanzi": "不好意思",
+    "audio": "03-不好意思.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Non parlo cinese",
+    "pinyin": "Wǒ bù huì shuō zhōngwén",
+    "hanzi": "我不会说中文",
+    "showBig": true,
+    "audio": "04-我不会说中文.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "Mi porti a questo indirizzo, per favore",
+    "pinyin": "Qǐng dài wǒ qù zhège dìzhǐ",
+    "hanzi": "请带我去这个地址",
+    "showBig": true,
+    "audio": "05-请带我去这个地址.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "Quanto costa?",
+    "pinyin": "Duōshao qián?",
+    "hanzi": "多少钱？",
+    "showBig": true,
+    "audio": "06-多少钱.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "Si fermi qui, grazie",
+    "pinyin": "Zài zhèlǐ tíng, xièxie",
+    "hanzi": "在这里停，谢谢",
+    "audio": "07-在这里停谢谢.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Il menù, per favore",
+    "pinyin": "Qǐng gěi wǒ càidān",
+    "hanzi": "请给我菜单",
+    "audio": "08-请给我菜单.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Non piccante, per favore",
+    "pinyin": "Bù là, xièxie",
+    "hanzi": "不辣，谢谢",
+    "showBig": true,
+    "audio": "09-不辣谢谢.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Il conto, per favore",
+    "pinyin": "Mǎidān",
+    "hanzi": "买单",
+    "audio": "10-买单.m4a"
+  },
+  {
+    "cat": "acquisti",
+    "it": "Troppo caro",
+    "pinyin": "Tài guì le",
+    "hanzi": "太贵了",
+    "audio": "11-太贵了.m4a"
+  },
+  {
+    "cat": "acquisti",
+    "it": "Posso pagare con la carta?",
+    "pinyin": "Kěyǐ shuākǎ ma?",
+    "hanzi": "可以刷卡吗？",
+    "audio": "12-可以刷卡吗.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Aiuto!",
+    "pinyin": "Jiùmìng!",
+    "hanzi": "救命！",
+    "showBig": true,
+    "audio": "13-救命.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Ho bisogno di un medico",
+    "pinyin": "Wǒ xūyào yīshēng",
+    "hanzi": "我需要医生",
+    "showBig": true,
+    "audio": "14-我需要医生.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Chiamate la polizia",
+    "pinyin": "Qǐng jiào jǐngchá",
+    "hanzi": "请叫警察",
+    "showBig": true,
+    "audio": "15-请叫警察.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "Dov'è il bagno?",
+    "pinyin": "Cèsuǒ zài nǎlǐ?",
+    "hanzi": "厕所在哪里？",
+    "showBig": true,
+    "audio": "16-厕所在哪里.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "Dov'è la stazione della metro?",
+    "pinyin": "Dìtiězhàn zài nǎlǐ?",
+    "hanzi": "地铁站在哪里？",
+    "audio": "17-地铁站在哪里.m4a"
+  }
+]

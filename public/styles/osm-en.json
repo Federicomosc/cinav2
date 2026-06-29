@@ -1,0 +1,7 @@
+{
+  "version": 8,
+  "name": "DEPRECATO — usa src/lib/mapStyle.ts",
+  "metadata": {
+    "note": "Lo stile offline è costruito in runtime da offlineMapStyle() in src/lib/mapStyle.ts quando esiste public/tiles/cina.pmtiles."
+  }
+}

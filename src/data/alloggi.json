@@ -1,0 +1,47 @@
+[
+  {
+    "id": "hidden-house",
+    "city": "chengdu",
+    "name": "The Hidden House",
+    "address": "Luomashi, Qingyang District, Chengdu 610020 (Taikoo Li & Hejiangting)",
+    "addressLocal": "成都市青羊区骡马市",
+    "checkIn": "2026-07-31",
+    "checkOut": "2026-08-01",
+    "confirmed": true,
+    "notes": "Vicino a Taikoo Li. Indirizzo cinese a livello quartiere — verificare la via esatta."
+  },
+  {
+    "id": "hotel-chongqing",
+    "city": "chongqing",
+    "name": "Hotel Chongqing (da inserire)",
+    "checkIn": "2026-08-02",
+    "checkOut": "2026-08-04",
+    "confirmed": false,
+    "notes": "Inserire nome, indirizzo EN + 汉字 e telefono dal booking."
+  },
+  {
+    "id": "hotel-zhangjiajie",
+    "city": "zhangjiajie",
+    "name": "Hotel Zhangjiajie / Wulingyuan (da inserire)",
+    "checkIn": "2026-08-05",
+    "checkOut": "2026-08-07",
+    "confirmed": false,
+    "notes": "Possibile split Wulingyuan/Zhangjiajie — vedi itinerario."
+  },
+  {
+    "id": "hotel-pechino",
+    "city": "pechino",
+    "name": "Hotel Pechino (da inserire)",
+    "checkIn": "2026-08-08",
+    "checkOut": "2026-08-12",
+    "confirmed": false
+  },
+  {
+    "id": "hotel-shanghai",
+    "city": "shanghai",
+    "name": "Hotel Shanghai (da inserire)",
+    "checkIn": "2026-08-13",
+    "checkOut": "2026-08-18",
+    "confirmed": false
+  }
+]

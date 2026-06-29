@@ -1,0 +1,39 @@
+{
+  "cinesi": [
+    { "label": "Polizia", "number": "110" },
+    { "label": "Ambulanza", "number": "120" },
+    { "label": "Pompieri", "number": "119" },
+    { "label": "Incidenti stradali", "number": "122" },
+    { "label": "Hotline turistica nazionale", "number": "12301" }
+  ],
+  "consolari": [
+    {
+      "name": "Ambasciata d'Italia",
+      "city": "Pechino",
+      "address": "2 San Li Tun Dong Er Jie, Chaoyang District, Beijing",
+      "addressLocal": "北京市朝阳区三里屯东二街2号",
+      "phone": "+86 10 8532 7600",
+      "emergency24h": "+86 ...",
+      "verified": false
+    },
+    {
+      "name": "Consolato Generale d'Italia",
+      "city": "Shanghai",
+      "address": "The Center, 989 Changle Road, Shanghai",
+      "addressLocal": "上海市长乐路989号世纪商贸广场",
+      "phone": "+86 21 5407 5588",
+      "emergency24h": "+86 ...",
+      "verified": false
+    },
+    {
+      "name": "Consolato Generale d'Italia",
+      "city": "Chongqing",
+      "address": "Chongqing",
+      "addressLocal": "重庆",
+      "phone": "+86 ...",
+      "emergency24h": "+86 ...",
+      "verified": false
+    }
+  ],
+  "disclaimer": "Contatti consolari DA CONFERMARE sul sito della Farnesina (esteri.it) poco prima della partenza, poi fissarli definitivi qui per averli offline."
+}

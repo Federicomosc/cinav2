@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Capacitor native platforms (generate con `npx cap add`)
+/ios
+/android
+
+# Mappa offline generata (vedi scripts/) — grande, non versionare
+/public/tiles/*.pmtiles
+/public/tiles/_part_*.pmtiles
+/public/tiles/routing/
+/tools/pmtiles

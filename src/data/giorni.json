@@ -1,0 +1,445 @@
+[
+  {
+    "n": 1,
+    "date": "2026-07-30",
+    "city": "In viaggio",
+    "title": "Volo per la Cina",
+    "acts": [
+      {
+        "label": "Volo MXP → Chengdu · CA446"
+      }
+    ],
+    "schedule": {
+      "pranzo": "Volo",
+      "pomeriggio": "Volo",
+      "cena": "Volo",
+      "sera": "Volo",
+      "notte": "Volo"
+    },
+    "euroTotal": 1903.68,
+    "euroPerPerson": 475.92
+  },
+  {
+    "n": 2,
+    "date": "2026-07-31",
+    "city": "Chengdu",
+    "title": "Arrivo, Panda e prima sera",
+    "acts": [
+      {
+        "label": "Base dei Panda",
+        "poi": "panda-base"
+      },
+      {
+        "label": "Jinli Ancient Street",
+        "poi": "jinli"
+      },
+      {
+        "label": "People's Park",
+        "poi": "renmin-park"
+      }
+    ],
+    "schedule": {
+      "mattino": "Transfer",
+      "pranzo": "Chengdu",
+      "pomeriggio": "Panda",
+      "cena": "Chengdu",
+      "sera": "Chengdu",
+      "notte": "Chengdu"
+    },
+    "euroTotal": 50.0,
+    "euroPerPerson": 12.5
+  },
+  {
+    "n": 3,
+    "date": "2026-08-01",
+    "city": "Chengdu",
+    "title": "Chengdu + treno per Chongqing",
+    "acts": [
+      {
+        "label": "Tempio di Wuhou",
+        "poi": "wuhou"
+      },
+      {
+        "label": "Treno → Chongqing"
+      },
+      {
+        "label": "Drone show serale"
+      }
+    ],
+    "schedule": {
+      "mattino": "Chengdu",
+      "pranzo": "Chengdu",
+      "pomeriggio": "Treno",
+      "cena": "Chongqing",
+      "sera": "Chongqing",
+      "notte": "Chongqing"
+    },
+    "euroTotal": 120.0,
+    "euroPerPerson": 30.0
+  },
+  {
+    "n": 4,
+    "date": "2026-08-02",
+    "city": "Chongqing",
+    "title": "Chongqing cyberpunk",
+    "acts": [
+      {
+        "label": "Hongya Cave",
+        "poi": "hongya"
+      },
+      {
+        "label": "Stazione di Liziba",
+        "poi": "liziba"
+      }
+    ],
+    "schedule": {
+      "mattino": "Chongqing",
+      "pranzo": "Chongqing",
+      "pomeriggio": "Chongqing",
+      "cena": "Chongqing",
+      "sera": "Chongqing",
+      "notte": "Chongqing"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 5,
+    "date": "2026-08-03",
+    "city": "Chongqing",
+    "title": "Fiume e città vecchia",
+    "acts": [
+      {
+        "label": "Yangtze Cableway",
+        "poi": "cableway-cq"
+      },
+      {
+        "label": "Ciqikou Old Town",
+        "poi": "ciqikou"
+      }
+    ],
+    "schedule": {
+      "mattino": "Chongqing",
+      "pranzo": "Chongqing",
+      "pomeriggio": "Chongqing",
+      "cena": "Chongqing",
+      "sera": "Chongqing",
+      "notte": "Chongqing"
+    }
+  },
+  {
+    "n": 6,
+    "date": "2026-08-04",
+    "city": "Chongqing",
+    "title": "Giornata libera a Chongqing",
+    "acts": [],
+    "schedule": {
+      "mattino": "Chongqing",
+      "pranzo": "Chongqing",
+      "pomeriggio": "Chongqing",
+      "cena": "Chongqing",
+      "sera": "Chongqing",
+      "notte": "Chongqing"
+    }
+  },
+  {
+    "n": 7,
+    "date": "2026-08-05",
+    "city": "Zhangjiajie",
+    "title": "Trasferimento a Zhangjiajie",
+    "acts": [
+      {
+        "label": "Treno → Zhangjiajie"
+      },
+      {
+        "label": "Bus per Wulingyuan"
+      }
+    ],
+    "schedule": {
+      "mattino": "Treno",
+      "pranzo": "Chongqing",
+      "pomeriggio": "Zhangijajie",
+      "cena": "Taxi/Bus",
+      "sera": "Wulingyuan",
+      "notte": "Wulingyuan"
+    },
+    "euroTotal": 120.0,
+    "euroPerPerson": 30.0
+  },
+  {
+    "n": 8,
+    "date": "2026-08-06",
+    "city": "Zhangjiajie",
+    "title": "Le montagne Avatar",
+    "acts": [
+      {
+        "label": "National Forest Park",
+        "poi": "avatar-park"
+      }
+    ],
+    "schedule": {
+      "mattino": "Wulingyuan",
+      "pranzo": "Avatar",
+      "pomeriggio": "Avatar",
+      "cena": "Avatar",
+      "sera": "Taxi/Bus",
+      "notte": "Zhangijajie"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 9,
+    "date": "2026-08-07",
+    "city": "Zhangjiajie",
+    "title": "Tianmen, Porta del Paradiso",
+    "acts": [
+      {
+        "label": "Tianmen Mountain",
+        "poi": "tianmen"
+      },
+      {
+        "label": "Grand Canyon & Glass Bridge",
+        "poi": "glass-bridge"
+      }
+    ],
+    "schedule": {
+      "mattino": "Zhangijajie",
+      "pranzo": "Porta paradiso",
+      "pomeriggio": "Porta paradiso",
+      "cena": "Zhangijajie",
+      "sera": "Zhangijajie",
+      "notte": "Zhangijajie"
+    }
+  },
+  {
+    "n": 10,
+    "date": "2026-08-08",
+    "city": "Pechino",
+    "title": "Volo per Pechino",
+    "acts": [
+      {
+        "label": "Volo DYG → Pechino · CA8610"
+      }
+    ],
+    "schedule": {
+      "mattino": "Zhangijajie",
+      "pranzo": "Zhangijajie",
+      "pomeriggio": "Volo",
+      "cena": "Volo",
+      "sera": "Pechino",
+      "notte": "Pechino"
+    },
+    "euroTotal": 824.84,
+    "euroPerPerson": 206.21
+  },
+  {
+    "n": 11,
+    "date": "2026-08-09",
+    "city": "Pechino",
+    "title": "Centro imperiale",
+    "acts": [
+      {
+        "label": "Tempio del Cielo",
+        "poi": "temple-heaven"
+      }
+    ],
+    "schedule": {
+      "mattino": "Pechino",
+      "pranzo": "Pechino",
+      "pomeriggio": "Pechino",
+      "cena": "Pechino",
+      "sera": "Pechino",
+      "notte": "Pechino"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 12,
+    "date": "2026-08-10",
+    "city": "Pechino",
+    "title": "La Grande Muraglia",
+    "acts": [
+      {
+        "label": "Muraglia di Mutianyu",
+        "poi": "mutianyu"
+      }
+    ],
+    "schedule": {
+      "mattino": "Pechino",
+      "pranzo": "Pechino",
+      "pomeriggio": "Pechino",
+      "cena": "Pechino",
+      "sera": "Pechino",
+      "notte": "Pechino"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 13,
+    "date": "2026-08-11",
+    "city": "Pechino",
+    "title": "Città Proibita",
+    "acts": [
+      {
+        "label": "Città Proibita",
+        "poi": "forbidden-city"
+      }
+    ],
+    "schedule": {
+      "mattino": "Muraglia",
+      "pranzo": "Muraglia",
+      "pomeriggio": "Muraglia",
+      "cena": "Muraglia",
+      "sera": "Pechino",
+      "notte": "Pechino"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 14,
+    "date": "2026-08-12",
+    "city": "Pechino",
+    "title": "Palazzo d'Estate",
+    "acts": [
+      {
+        "label": "Palazzo d'Estate",
+        "poi": "summer-palace"
+      }
+    ],
+    "schedule": {
+      "mattino": "Pechino",
+      "pranzo": "Pechino",
+      "pomeriggio": "Pechino",
+      "cena": "Pechino",
+      "sera": "Pechino",
+      "notte": "Pechino"
+    }
+  },
+  {
+    "n": 15,
+    "date": "2026-08-13",
+    "city": "Shanghai",
+    "title": "Treno per Shanghai + Bund",
+    "acts": [
+      {
+        "label": "Treno → Shanghai"
+      },
+      {
+        "label": "Il Bund",
+        "poi": "bund"
+      }
+    ],
+    "schedule": {
+      "mattino": "Pechino",
+      "pranzo": "Treno",
+      "pomeriggio": "Treno",
+      "cena": "Shangai",
+      "sera": "Shangai",
+      "notte": "Shangai"
+    },
+    "euroTotal": 442.24,
+    "euroPerPerson": 110.56
+  },
+  {
+    "n": 16,
+    "date": "2026-08-14",
+    "city": "Shanghai",
+    "title": "Vecchia e nuova Shanghai",
+    "acts": [
+      {
+        "label": "Yu Garden",
+        "poi": "yu-garden"
+      },
+      {
+        "label": "Shanghai Tower",
+        "poi": "shanghai-tower"
+      }
+    ],
+    "schedule": {
+      "mattino": "Shangai",
+      "pranzo": "Shangai",
+      "pomeriggio": "Shangai",
+      "cena": "Shangai",
+      "sera": "Shangai",
+      "notte": "Shangai"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 17,
+    "date": "2026-08-15",
+    "city": "Shanghai",
+    "title": "Gita a Suzhou",
+    "acts": [
+      {
+        "label": "Gita a Suzhou"
+      }
+    ],
+    "schedule": {
+      "mattino": "Shangai",
+      "pranzo": "Shangai",
+      "pomeriggio": "Shangai",
+      "cena": "Shangai",
+      "sera": "Shangai",
+      "notte": "Shangai"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 18,
+    "date": "2026-08-16",
+    "city": "Shanghai",
+    "title": "Concessione Francese",
+    "acts": [
+      {
+        "label": "Concessione Francese",
+        "poi": "french-concession"
+      }
+    ],
+    "schedule": {
+      "mattino": "Shangai",
+      "pranzo": "Shangai",
+      "pomeriggio": "Shangai",
+      "cena": "Shangai",
+      "sera": "Shangai",
+      "notte": "Shangai"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 19,
+    "date": "2026-08-17",
+    "city": "Shanghai",
+    "title": "Ultimo giorno + volo di ritorno",
+    "acts": [
+      {
+        "label": "Volo PVG → MXP · CA967 (notte)"
+      }
+    ],
+    "schedule": {
+      "mattino": "Shangai",
+      "pranzo": "Shangai",
+      "pomeriggio": "Shangai",
+      "cena": "Shangai",
+      "sera": "Shangai",
+      "notte": "Volo"
+    },
+    "euroPerPerson": 0.0
+  },
+  {
+    "n": 20,
+    "date": "2026-08-18",
+    "city": "In viaggio",
+    "title": "Rientro a casa",
+    "acts": [
+      {
+        "label": "PVG → MXP"
+      }
+    ],
+    "schedule": {
+      "mattino": "Volo",
+      "pranzo": "Home"
+    },
+    "euroTotal": 1903.68,
+    "euroPerPerson": 475.92
+  }
+]

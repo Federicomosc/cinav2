@@ -1,0 +1,65 @@
+[
+  {
+    "id": "ca446",
+    "type": "flight",
+    "code": "CA446",
+    "from": "MXP · Milano Malpensa T1",
+    "to": "TFU · Chengdu Tianfu T1",
+    "departAt": "2026-07-30T13:00",
+    "arriveAt": "2026-07-31T05:40",
+    "confirmed": true,
+    "notes": "Andata intercontinentale. Air China."
+  },
+  {
+    "id": "train-cd-cq",
+    "type": "train",
+    "code": "DA PRENOTARE",
+    "from": "Chengdu",
+    "to": "Chongqing",
+    "departAt": "2026-08-01T16:00",
+    "confirmed": false,
+    "notes": "Treno AV. Codice e orario da inserire dal biglietto reale."
+  },
+  {
+    "id": "train-cq-zjj",
+    "type": "train",
+    "code": "DA PRENOTARE",
+    "from": "Chongqing",
+    "to": "Zhangjiajie",
+    "departAt": "2026-08-05T08:00",
+    "confirmed": false,
+    "notes": "Treno AV. Codice e orario da inserire dal biglietto reale."
+  },
+  {
+    "id": "ca8610",
+    "type": "flight",
+    "code": "CA8610",
+    "from": "DYG · Zhangjiajie Hehua T2",
+    "to": "PKX · Pechino Daxing",
+    "departAt": "2026-08-08T17:15",
+    "arriveAt": "2026-08-08T19:40",
+    "confirmed": true,
+    "notes": "Volo interno. NB: l'xlsx indica PKX (Daxing), il doc v2 citava PEK — confermare sul biglietto."
+  },
+  {
+    "id": "train-bj-sh",
+    "type": "train",
+    "code": "DA PRENOTARE",
+    "from": "Pechino",
+    "to": "Shanghai",
+    "departAt": "2026-08-13T09:00",
+    "confirmed": false,
+    "notes": "Treno AV. Codice e orario da inserire dal biglietto reale."
+  },
+  {
+    "id": "ca967",
+    "type": "flight",
+    "code": "CA967",
+    "from": "PVG · Shanghai Pudong T2",
+    "to": "MXP · Milano Malpensa T1",
+    "departAt": "2026-08-18T01:30",
+    "arriveAt": "2026-08-18T08:05",
+    "confirmed": true,
+    "notes": "Ritorno. Air China. Partenza notte 17→18 agosto."
+  }
+]

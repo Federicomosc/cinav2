@@ -1,0 +1,12 @@
+{
+  "nights": {
+    "Chengdu": 1,
+    "Chongqing": 4,
+    "Wulingyuan": 1,
+    "Zhangjiajie": 2,
+    "Pechino": 5,
+    "Shanghai": 4
+  },
+  "budgetTotalEuro": 5364.44,
+  "budgetPerPersonEuro": 1341.11
+}

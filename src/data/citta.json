@@ -1,0 +1,62 @@
+[
+  {
+    "id": "chengdu",
+    "name": "Chengdu",
+    "nameLocal": "成都",
+    "center": { "lat": 30.6571, "lng": 104.0665 },
+    "intro": "Capitale del Sichuan: panda, hotpot piccantissimo e una cultura del vivere lento fatta di case da tè e parchi. Porta d'ingresso del viaggio.",
+    "highlights": ["Base dei Panda", "Jinli & Wuhou", "People's Park", "Kuanzhai Xiangzi", "Opera del Sichuan"],
+    "itineraries": [
+      { "title": "Classico 1 giorno", "stops": ["panda-base", "jinli", "wuhou"] },
+      { "title": "Vita lenta", "stops": ["renmin-park", "jinli"] }
+    ]
+  },
+  {
+    "id": "chongqing",
+    "name": "Chongqing",
+    "nameLocal": "重庆",
+    "center": { "lat": 29.5630, "lng": 106.5516 },
+    "intro": "Megalopoli verticale sul Yangtze: grattacieli nella nebbia, metro che bucano i palazzi e il regno del hotpot. Cyberpunk dal vivo.",
+    "highlights": ["Hongya Cave", "Liziba", "Yangtze Cableway", "Ciqikou", "Crociera Due Fiumi"],
+    "itineraries": [
+      { "title": "Notturno cyberpunk", "stops": ["hongya", "cableway-cq", "liziba"] },
+      { "title": "Storia e fiume", "stops": ["ciqikou", "hongya"] }
+    ]
+  },
+  {
+    "id": "zhangjiajie",
+    "name": "Zhangjiajie",
+    "nameLocal": "张家界",
+    "center": { "lat": 29.1170, "lng": 110.4790 },
+    "intro": "I pilastri di arenaria che hanno ispirato Avatar, più la Porta del Paradiso di Tianmen. Natura monumentale, logistica impegnativa.",
+    "highlights": ["Foresta Avatar", "Tianmen", "Glass Bridge", "Wulingyuan"],
+    "itineraries": [
+      { "title": "Avatar + Tianmen (2 gg)", "stops": ["avatar-park", "tianmen"] },
+      { "title": "Solo natura", "stops": ["avatar-park", "glass-bridge"] }
+    ]
+  },
+  {
+    "id": "pechino",
+    "name": "Pechino",
+    "nameLocal": "北京",
+    "center": { "lat": 39.9042, "lng": 116.4074 },
+    "intro": "Il cuore imperiale e politico: Città Proibita, Muraglia, Tempio del Cielo, hutong e arte contemporanea al 798.",
+    "highlights": ["Città Proibita", "Mutianyu", "Tempio del Cielo", "Palazzo d'Estate", "798"],
+    "itineraries": [
+      { "title": "Imperiale", "stops": ["forbidden-city", "temple-heaven"] },
+      { "title": "Muraglia", "stops": ["mutianyu"] }
+    ]
+  },
+  {
+    "id": "shanghai",
+    "name": "Shanghai",
+    "nameLocal": "上海",
+    "center": { "lat": 31.2304, "lng": 121.4737 },
+    "intro": "La metropoli che guarda al futuro: il Bund, i grattacieli di Pudong, la Concessione Francese e una gita a Suzhou. Chiusura del tour.",
+    "highlights": ["Il Bund", "Yu Garden", "Shanghai Tower", "Concessione Francese", "Gita a Suzhou"],
+    "itineraries": [
+      { "title": "Skyline", "stops": ["bund", "shanghai-tower"] },
+      { "title": "Vecchia Shanghai", "stops": ["yu-garden", "french-concession"] }
+    ]
+  }
+]

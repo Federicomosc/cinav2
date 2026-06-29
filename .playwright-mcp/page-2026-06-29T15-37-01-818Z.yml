@@ -1,0 +1,118 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - button "‹ Tutte le città" [ref=e435] [cursor=pointer]
+    - generic [ref=e436]:
+      - heading "Chengdu 成都" [level=1] [ref=e437]
+      - generic [ref=e438]: 31 lug – 01 ago
+      - paragraph [ref=e439]: "Capitale del Sichuan: panda, hotpot piccantissimo e una cultura del vivere lento fatta di case da tè e parchi. Porta d'ingresso del viaggio."
+    - heading "Da vedere" [level=2] [ref=e440]
+    - generic [ref=e441]:
+      - button "Base Ricerca Panda ★★★★★ prenota" [ref=e442] [cursor=pointer]:
+        - generic [ref=e443]: Base Ricerca Panda
+        - generic [ref=e444]: ★★★★★
+        - generic [ref=e445]: prenota
+      - button "Jinli Ancient Street ★★★★☆" [ref=e446] [cursor=pointer]:
+        - generic [ref=e448]: 🏛️
+        - generic [ref=e449]: Jinli Ancient Street
+        - generic [ref=e450]: ★★★★☆
+      - button "Tempio di Wuhou ★★★★☆" [ref=e451] [cursor=pointer]:
+        - generic [ref=e453]: 🏛️
+        - generic [ref=e454]: Tempio di Wuhou
+        - generic [ref=e455]: ★★★★☆
+      - button "Kuanzhai Xiangzi ★★★★☆" [ref=e456] [cursor=pointer]:
+        - generic [ref=e458]: 🏛️
+        - generic [ref=e459]: Kuanzhai Xiangzi
+        - generic [ref=e460]: ★★★★☆
+      - button "People's Park (Heming Teahouse) ★★★★☆" [ref=e461] [cursor=pointer]:
+        - generic [ref=e463]: 🎭
+        - generic [ref=e464]: People's Park (Heming Teahouse)
+        - generic [ref=e465]: ★★★★☆
+      - button "Opera del Sichuan @ Shufeng Yayun ★★★★★" [ref=e466] [cursor=pointer]:
+        - generic [ref=e468]: 🎭
+        - generic [ref=e469]: Opera del Sichuan @ Shufeng Yayun
+        - generic [ref=e470]: ★★★★★
+      - button "Chen Mapo Tofu ★★★★☆" [ref=e471] [cursor=pointer]:
+        - generic [ref=e473]: 🍜
+        - generic [ref=e474]: Chen Mapo Tofu
+        - generic [ref=e475]: ★★★★☆
+      - button "Hotpot sichuanese ★★★★☆" [ref=e476] [cursor=pointer]:
+        - generic [ref=e478]: 🍜
+        - generic [ref=e479]: Hotpot sichuanese
+        - generic [ref=e480]: ★★★★☆
+    - heading "Itinerari" [level=2] [ref=e481]
+    - generic [ref=e482]:
+      - article [ref=e483]:
+        - text: Classico 1 giorno
+        - generic [ref=e484]:
+          - button "1. Base Ricerca Panda" [ref=e485] [cursor=pointer]
+          - button "2. Jinli Ancient Street" [ref=e486] [cursor=pointer]
+          - button "3. Tempio di Wuhou" [ref=e487] [cursor=pointer]
+      - article [ref=e488]:
+        - text: Vita lenta
+        - generic [ref=e489]:
+          - button "1. People's Park (Heming Teahouse)" [ref=e490] [cursor=pointer]
+          - button "2. Jinli Ancient Street" [ref=e491] [cursor=pointer]
+    - heading "Guida" [level=2] [ref=e492]
+    - generic [ref=e493]:
+      - paragraph [ref=e494]: "La capitale del “vivere lento”: panda, case da tè centenarie e la cucina più piccante della Cina. La vostra prima tappa e il primo, vero impatto con il Paese."
+      - paragraph [ref=e495]: "Chengdu è una città che ti chiede di rallentare. Mentre il resto della Cina corre, qui si gioca a mahjong sotto gli alberi, si beve tè per ore e ci si fa pulire le orecchie in mezzo a un parco. È una metropoli di oltre 20 milioni di abitanti, ma il suo ritmo è quello di un grande paese: i locali lo chiamano “bā shì”, il piacere assoluto dello stare comodi senza fare nulla. Per voi, reduci da un volo intercontinentale e da un fuso di sei ore, è la tappa di acclimatamento perfetta."
+      - paragraph [ref=e496]: "Capitale del Sichuan, Chengdu è il cuore di una delle tradizioni più ricche della Cina. Era il centro del regno di Shu all'epoca dei Tre Regni (III secolo d.C.), e quella storia di eroi e stratagemmi — Liu Bei, Zhuge Liang — è ancora dappertutto, nei templi e nei nomi delle strade. È anche la patria del panda gigante e di una cucina che ha reso celebre nel mondo il pepe di Sichuan, con il suo effetto “málà”: piccante e intorpidente insieme, che ti fa formicolare le labbra."
+      - paragraph [ref=e497]: "Praticamente: due giorni bastano per il meglio del centro più i panda. Tenete il primo mattino del giorno 1 per la Panda Base (l'unico momento in cui i panda sono attivi, e a fine luglio fa caldo) e usate i pomeriggi e le sere — più fresche — per templi, vicoli e case da tè. La metropolitana è moderna ed economica, i taxi/Didi costano poco."
+      - heading "L'icona" [level=3] [ref=e498]
+      - paragraph [ref=e499]: Non è uno zoo, ma il più importante centro al mondo per la riproduzione del panda gigante, immerso in un'enorme foresta di bambù. Vedere decine di panda — più i tenerissimi panda rossi — muoversi, mangiare e arrampicarsi in habitat semi-naturali è l'esperienza-simbolo non solo di Chengdu, ma probabilmente di tutto il viaggio. Dopo l'espansione “Panda Planet” la base è diventata vastissima, più simile a una passeggiata nel bosco che a un parco.
+      - listitem [ref=e500]: "Il Sun & Moon Nursery (asilo dei cuccioli) — la zona più amata: panda giovani che giocano e cadono dagli alberi. Code lunghe per le star, vale la pena arrivarci subito."
+      - listitem [ref=e501]: "I recinti dei panda adulti distribuiti su sentieri lunghi: prendetevela comoda, è grande."
+      - listitem [ref=e502]: I panda rossi, spesso liberi di passeggiare vicino ai visitatori lungo i sentieri.
+      - listitem [ref=e503]: Il museo del panda e i laghetti con aironi, se volete una pausa all'ombra.
+      - paragraph [ref=e504]: "Ad agosto fa caldo e umido: sopra i 26°C i panda vengono spostati nelle aree climatizzate al chiuso, dove li vedi attraverso il vetro ma sono molto meno attivi. È il motivo numero uno per cui devi esserci all'apertura: la mattina presto stanno fuori e fanno colazione (il loro momento più vivace, ~8:00–9:30). Arrivare alle 14:00 significa fotografare palle di pelo addormentate."
+      - heading "Storia & Tre Regni" [level=3] [ref=e505]
+      - paragraph [ref=e506]: "È il più importante memoriale al mondo dedicato al periodo dei Tre Regni, e un unicum: l'unico santuario in Cina che onora insieme un sovrano e il suo ministro. Celebra Liu Bei, imperatore di Shu, e soprattutto Zhuge Liang — lo stratega geniale che ogni cinese conosce, leale e saggio fino al mito. Capire Wuhou è capire metà delle storie che sentirai nominare per tutto il viaggio."
+      - paragraph [ref=e507]: Le origini risalgono al 223 d.C., attorno al mausoleo di Liu Bei. In origine il tempio di Zhuge Liang era separato, ma il popolo lo venerava più dell'imperatore stesso; nel 1390 un principe Ming li unì in un solo complesso “perché sovrano e suddito siano una cosa sola” — e da allora, per tutti, è semplicemente il “tempio del marchese Wu” (Zhuge Liang), non di Liu Bei. Un caso raro in cui l'affetto popolare ha riscritto la gerarchia ufficiale.
+      - listitem [ref=e508]: "La Stele delle Tre Eccellenze (epoca Tang): testo, calligrafia e incisione tutti firmati da maestri diversi — capolavoro assoluto, fermati a guardarla."
+      - listitem [ref=e509]: Sala di Liu Bei e Sala di Zhuge Liang, con le statue dei due e dei generali Guan Yu e Zhang Fei.
+      - listitem [ref=e510]: Tempio Sanyi, dedicato al “Giuramento del Giardino dei Peschi”, il patto di fratellanza fra Liu Bei, Guan Yu e Zhang Fei.
+      - listitem [ref=e511]: "Il Sentiero del Muro Rosso tra i bambù: il punto-foto più famoso di Chengdu (chi vuole lo fa in hanfu)."
+      - listitem [ref=e512]: Il mausoleo di Liu Bei (Huiling), tumulo circolare di oltre 1.700 anni.
+      - paragraph [ref=e513]: Un vicolo pedonale di 550 metri in stile tardo-Qing, accanto al Wuhou Temple, fatto di lanterne rosse, botteghe artigiane e bancarelle di cibo. È turistico e affollato — non lo vivrete come “autentico” — ma è scenografico, profumato e perfetto come primo, allegro tuffo nell'atmosfera cinese e nello street food sichuanese. Di sera, con le luci accese, è bellissimo.
+      - listitem [ref=e514]: Manzo Zhang Fei (dal generale dei Tre Regni), bobo chicken (spiedini freddi in salsa piccante), budino di tofu e san da pao (palline di riso glutinoso).
+      - listitem [ref=e515]: "Gli artigiani del “sugar painting”: disegni di zucchero caramellato fatti a mano, e le figurine di pasta di riso."
+      - listitem [ref=e516]: Le case da tè e i bar nascosti nei cortili per una sosta serale.
+      - heading "Il vivere lento" [level=3] [ref=e517]
+      - paragraph [ref=e518]: "Se Chengdu ha un'anima, è qui. Il People's Park (aperto nel 1911, il primo parco pubblico del Sichuan) è il “salotto della città”: pensionati che fanno calligrafia con l'acqua sul selciato, gente che balla, l'angolo dei matrimoni dove i genitori “espongono” i curriculum dei figli in cerca di partner. In mezzo c'è la Heming Teahouse, aperta dal 1923, una delle più antiche della città: migliaia di sedie di bambù sotto i platani, tè in gaiwan (la ciotola col coperchio) e i maestri che versano l'acqua da teiere dal beccuccio lunghissimo. È l'esperienza più autentica e più rilassante del viaggio, perfetta contro il jet lag."
+      - paragraph [ref=e519]: "La regola è “una persona, un tè, un posto”: ordini la tua ciotola e i rabbocchi d'acqua calda sono illimitati — puoi restare cinque minuti o cinque ore. Il rito locale è il “cǎi ěr” (采耳), la pulizia delle orecchie con ferretti e diapason: senti il tintinnio in tutto il parco, è sorprendentemente rilassante. Curiosità: c'è anche un rifugio antiaereo sotto il parco, tenuto a 25°C costanti — refrigerio naturale nelle giornate roventi."
+      - listitem [ref=e520]: "Siediti e ordina: per chi inizia, jasmine tea o “Hua Mao Feng” (verde ai boccioli) sono sicuri; ti porteranno snack al tavolo (frittelle dan hong gao, dolcetti)."
+      - listitem [ref=e521]: Provare il cǎi ěr, se te la senti — è la cosa più Chengdu che esista.
+      - listitem [ref=e522]: "Spettacolo di opera face-changing dentro la casa da tè: ~48 ¥ per ~30 min, di pomeriggio."
+      - listitem [ref=e523]: "Osservare: il Matchmaking Corner nel weekend è uno spaccato di società cinese imperdibile."
+      - paragraph [ref=e524]: "Tre vicoli paralleli di epoca Qing, restaurati, che mettono in fila la vecchia e la nuova Chengdu. Nascono nel 1718 come parte di una guarnigione manciù: dopo la rivoluzione del 1911 le mura caddero e le caserme diventarono case. Oggi è un distretto culturale protetto, elegante, perfetto da passeggiare al tramonto."
+      - listitem [ref=e525]: "Kuan (Largo) — la “vecchia Chengdu”: cortili, case da tè storiche, ristoranti sichuanesi, spettacoli di face-changing."
+      - listitem [ref=e526]: "Zhai (Stretto) — il lato artsy: caffè di design, boutique, brand creativi."
+      - listitem [ref=e527]: "Jing (del Giardino) — la “nuova Chengdu”: un muro di mattoni storici lungo 400 m che racconta la città."
+      - heading "La serata" [level=3] [ref=e528]
+      - paragraph [ref=e529]: "L'opera sichuanese è famosa nel mondo per il “bian lian” (变脸), il cambio-volto: gli attori cambiano maschera di colpo, davanti ai tuoi occhi, a velocità impossibile — un segreto custodito e tramandato che ancora oggi nessuno spiega del tutto. Shufeng Yayun è il teatro storico dove vederlo fatto bene."
+      - listitem [ref=e530]: Il bian lian, ovviamente, più lo sputafuoco.
+      - listitem [ref=e531]: Ombre cinesi, marionette e numeri di musica e danza tradizionale.
+      - listitem [ref=e532]: "Tutto molto visivo: si gode anche senza capire una parola di cinese."
+      - heading "Mangiare a Chengdu" [level=4] [ref=e533]
+      - heading "Se avanza tempo" [level=3] [ref=e534]
+      - heading "Un piano per i 2 giorni" [level=3] [ref=e535]
+  - navigation "Navigazione principale" [ref=e67]:
+    - generic [ref=e68]:
+      - button "Oggi" [ref=e69] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e73]: Oggi
+      - button "Città" [active] [ref=e75] [cursor=pointer]:
+        - img [ref=e77]
+        - generic [ref=e79]: Città
+      - button "Viaggio" [ref=e80] [cursor=pointer]:
+        - img [ref=e82]
+        - generic [ref=e84]: Viaggio
+      - button "Mappa" [ref=e85] [cursor=pointer]:
+        - img [ref=e87]
+        - generic [ref=e89]: Mappa
+      - button "Docs" [ref=e90] [cursor=pointer]:
+        - img [ref=e92]
+        - generic [ref=e94]: Docs
+      - button "Album" [ref=e95] [cursor=pointer]:
+        - img [ref=e97]
+        - generic [ref=e99]: Album

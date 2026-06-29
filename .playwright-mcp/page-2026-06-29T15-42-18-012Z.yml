@@ -1,0 +1,82 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - time [ref=e8]: LUN · 29 giu 2026
+        - generic [ref=e9]: Pre-partenza
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - generic [ref=e15]:
+            - generic [ref=e16]: "31"
+            - generic [ref=e17]: giorni
+        - generic [ref=e18]:
+          - heading "Manca poco" [level=1] [ref=e19]
+          - paragraph [ref=e20]:
+            - text: Partenza il
+            - strong [ref=e21]: GIO · 30 lug 2026
+          - button "Checklist pre-partenza ›" [ref=e22] [cursor=pointer]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - heading "Prossimo spostamento" [level=2] [ref=e25]
+          - generic [ref=e26]: Tra 31 gg
+        - button "Volo MXP · Milano Malpensa T1 → TFU · Chengdu Tianfu T1 CA446 · 30 lug · 13:00" [ref=e27] [cursor=pointer]:
+          - generic [ref=e28]: ✈
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - generic [ref=e31]: Volo
+              - generic [ref=e32]: MXP · Milano Malpensa T1 → TFU · Chengdu Tianfu T1
+            - generic [ref=e33]:
+              - generic [ref=e34]: CA446
+              - generic [ref=e35]: ·
+              - generic [ref=e36]: 30 lug
+              - generic [ref=e37]: ·
+              - generic [ref=e38]: 13:00
+          - generic [ref=e39]: ›
+      - generic [ref=e40]:
+        - heading "Strumenti" [level=2] [ref=e42]
+        - generic [ref=e43]:
+          - button "语 Frasario Mostra al tassista" [ref=e44] [cursor=pointer]:
+            - generic [ref=e45]: 语
+            - generic [ref=e46]: Frasario
+            - generic [ref=e47]: Mostra al tassista
+          - button "¥ Valuta Converti & dividi" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: ¥
+            - generic [ref=e50]: Valuta
+            - generic [ref=e51]: Converti & dividi
+          - button "✚ Salute Numeri SOS" [ref=e52] [cursor=pointer]:
+            - generic [ref=e53]: ✚
+            - generic [ref=e54]: Salute
+            - generic [ref=e55]: Numeri SOS
+          - button "◎ Mappa POI & GPS" [ref=e56] [cursor=pointer]:
+            - generic [ref=e57]: ◎
+            - generic [ref=e58]: Mappa
+            - generic [ref=e59]: POI & GPS
+          - button "🔒 Documenti Cassaforte" [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]: 🔒
+            - generic [ref=e62]: Documenti
+            - generic [ref=e63]: Cassaforte
+          - button "✈ Viaggio Timeline 20 gg" [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: ✈
+            - generic [ref=e66]: Viaggio
+            - generic [ref=e67]: Timeline 20 gg
+  - navigation "Navigazione principale":
+    - generic [ref=e68]:
+      - button "Oggi" [ref=e69] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e73]: Oggi
+      - button "Città" [ref=e75] [cursor=pointer]:
+        - img [ref=e77]
+        - generic [ref=e79]: Città
+      - button "Viaggio" [ref=e80] [cursor=pointer]:
+        - img [ref=e82]
+        - generic [ref=e84]: Viaggio
+      - button "Mappa" [ref=e85] [cursor=pointer]:
+        - img [ref=e87]
+        - generic [ref=e89]: Mappa
+      - button "Docs" [ref=e90] [cursor=pointer]:
+        - img [ref=e92]
+        - generic [ref=e94]: Docs
+      - button "Album" [ref=e95] [cursor=pointer]:
+        - img [ref=e97]
+        - generic [ref=e99]: Album

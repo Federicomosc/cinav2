@@ -1,0 +1,16 @@
+{
+  "trip": {
+    "name": "Cina Tour 2026",
+    "start": "2026-07-30",
+    "end": "2026-08-18",
+    "members": ["Fede", "Amico 2", "Amico 3", "Amico 4"],
+    "cnyPerEur": 7.8
+  },
+  "legs": [
+    { "city": "chengdu", "from": "2026-07-31", "to": "2026-08-01" },
+    { "city": "chongqing", "from": "2026-08-02", "to": "2026-08-04" },
+    { "city": "zhangjiajie", "from": "2026-08-05", "to": "2026-08-07" },
+    { "city": "pechino", "from": "2026-08-08", "to": "2026-08-12" },
+    { "city": "shanghai", "from": "2026-08-13", "to": "2026-08-18" }
+  ]
+}

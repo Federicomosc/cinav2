@@ -1,0 +1,92 @@
+- generic [ref=e2]:
+  - main [ref=e3]:
+    - generic [ref=e230]:
+      - generic [ref=e235]: 5 tappe
+      - heading "Città" [level=1] [ref=e236]
+      - paragraph [ref=e237]: Tocca una tappa per guida, POI e itinerari.
+    - generic [ref=e238]:
+      - 'button "Chengdu 成都 31 lug – 01 ago Capitale del Sichuan: panda, hotpot piccantissimo e una cultura del vivere lento fatta di case da tè e parchi. Porta d''ingresso del viaggio. Base dei Panda Jinli & Wuhou People''s Park 8 POI ›" [ref=e239] [cursor=pointer]':
+        - generic [ref=e240]: "1"
+        - generic [ref=e241]:
+          - generic [ref=e242]:
+            - heading "Chengdu 成都" [level=2] [ref=e243]
+            - generic [ref=e244]: 31 lug – 01 ago
+          - paragraph [ref=e245]: "Capitale del Sichuan: panda, hotpot piccantissimo e una cultura del vivere lento fatta di case da tè e parchi. Porta d'ingresso del viaggio."
+          - generic [ref=e246]:
+            - generic [ref=e247]:
+              - generic [ref=e248]: Base dei Panda
+              - generic [ref=e249]: Jinli & Wuhou
+              - generic [ref=e250]: People's Park
+            - generic [ref=e251]: 8 POI ›
+      - 'button "Chongqing 重庆 02 ago – 04 ago Megalopoli verticale sul Yangtze: grattacieli nella nebbia, metro che bucano i palazzi e il regno del hotpot. Cyberpunk dal vivo. Hongya Cave Liziba Yangtze Cableway 9 POI ›" [ref=e252] [cursor=pointer]':
+        - generic [ref=e253]: "2"
+        - generic [ref=e254]:
+          - generic [ref=e255]:
+            - heading "Chongqing 重庆" [level=2] [ref=e256]
+            - generic [ref=e257]: 02 ago – 04 ago
+          - paragraph [ref=e258]: "Megalopoli verticale sul Yangtze: grattacieli nella nebbia, metro che bucano i palazzi e il regno del hotpot. Cyberpunk dal vivo."
+          - generic [ref=e259]:
+            - generic [ref=e260]:
+              - generic [ref=e261]: Hongya Cave
+              - generic [ref=e262]: Liziba
+              - generic [ref=e263]: Yangtze Cableway
+            - generic [ref=e264]: 9 POI ›
+      - button "Zhangjiajie 张家界 05 ago – 07 ago I pilastri di arenaria che hanno ispirato Avatar, più la Porta del Paradiso di Tianmen. Natura monumentale, logistica impegnativa. Foresta Avatar Tianmen Glass Bridge 6 POI ›" [ref=e265] [cursor=pointer]:
+        - generic [ref=e266]: "3"
+        - generic [ref=e267]:
+          - generic [ref=e268]:
+            - heading "Zhangjiajie 张家界" [level=2] [ref=e269]
+            - generic [ref=e270]: 05 ago – 07 ago
+          - paragraph [ref=e271]: I pilastri di arenaria che hanno ispirato Avatar, più la Porta del Paradiso di Tianmen. Natura monumentale, logistica impegnativa.
+          - generic [ref=e272]:
+            - generic [ref=e273]:
+              - generic [ref=e274]: Foresta Avatar
+              - generic [ref=e275]: Tianmen
+              - generic [ref=e276]: Glass Bridge
+            - generic [ref=e277]: 6 POI ›
+      - 'button "Pechino 北京 08 ago – 12 ago Il cuore imperiale e politico: Città Proibita, Muraglia, Tempio del Cielo, hutong e arte contemporanea al 798. Città Proibita Mutianyu Tempio del Cielo 9 POI ›" [ref=e278] [cursor=pointer]':
+        - generic [ref=e279]: "4"
+        - generic [ref=e280]:
+          - generic [ref=e281]:
+            - heading "Pechino 北京" [level=2] [ref=e282]
+            - generic [ref=e283]: 08 ago – 12 ago
+          - paragraph [ref=e284]: "Il cuore imperiale e politico: Città Proibita, Muraglia, Tempio del Cielo, hutong e arte contemporanea al 798."
+          - generic [ref=e285]:
+            - generic [ref=e286]:
+              - generic [ref=e287]: Città Proibita
+              - generic [ref=e288]: Mutianyu
+              - generic [ref=e289]: Tempio del Cielo
+            - generic [ref=e290]: 9 POI ›
+      - 'button "Shanghai 上海 13 ago – 18 ago La metropoli che guarda al futuro: il Bund, i grattacieli di Pudong, la Concessione Francese e una gita a Suzhou. Chiusura del tour. Il Bund Yu Garden Shanghai Tower 9 POI ›" [ref=e291] [cursor=pointer]':
+        - generic [ref=e292]: "5"
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - heading "Shanghai 上海" [level=2] [ref=e295]
+            - generic [ref=e296]: 13 ago – 18 ago
+          - paragraph [ref=e297]: "La metropoli che guarda al futuro: il Bund, i grattacieli di Pudong, la Concessione Francese e una gita a Suzhou. Chiusura del tour."
+          - generic [ref=e298]:
+            - generic [ref=e299]:
+              - generic [ref=e300]: Il Bund
+              - generic [ref=e301]: Yu Garden
+              - generic [ref=e302]: Shanghai Tower
+            - generic [ref=e303]: 9 POI ›
+  - navigation "Navigazione principale" [ref=e67]:
+    - generic [ref=e68]:
+      - button "Oggi" [ref=e69] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e73]: Oggi
+      - button "Città" [active] [ref=e75] [cursor=pointer]:
+        - img [ref=e77]
+        - generic [ref=e79]: Città
+      - button "Viaggio" [ref=e80] [cursor=pointer]:
+        - img [ref=e82]
+        - generic [ref=e84]: Viaggio
+      - button "Mappa" [ref=e85] [cursor=pointer]:
+        - img [ref=e87]
+        - generic [ref=e89]: Mappa
+      - button "Docs" [ref=e90] [cursor=pointer]:
+        - img [ref=e92]
+        - generic [ref=e94]: Docs
+      - button "Album" [ref=e95] [cursor=pointer]:
+        - img [ref=e97]
+        - generic [ref=e99]: Album
