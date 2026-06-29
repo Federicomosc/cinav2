@@ -87,6 +87,16 @@ export interface AirplaneTestItem {
   order: number;
 }
 
+/** Itinerario POI creato dall'utente (per città). */
+export interface CustomItinerary {
+  id: string;
+  city: CityId;
+  title: string;
+  stops: string[]; // id POI in ordine
+  order: number;
+  updatedAt: number;
+}
+
 export interface Meta {
   key: string;
   value: unknown;
@@ -102,6 +112,7 @@ const db = new Dexie('cina-tour-2026') as Dexie & {
   medical: EntityTable<MedicalCard, 'member'>;
   actChecks: EntityTable<ActCheck, 'id'>;
   airplaneTests: EntityTable<AirplaneTestItem, 'id'>;
+  customItineraries: EntityTable<CustomItinerary, 'id'>;
   meta: EntityTable<Meta, 'key'>;
 };
 
@@ -125,6 +136,10 @@ db.version(3).stores({
 
 db.version(4).stores({
   airplaneTests: 'id, order',
+});
+
+db.version(5).stores({
+  customItineraries: 'id, city, order, updatedAt',
 });
 
 export { db };

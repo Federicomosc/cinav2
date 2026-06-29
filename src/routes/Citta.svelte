@@ -22,7 +22,6 @@
         <img class="cover" src={cityCoverSrc(c.id)} alt="" loading="lazy" decoding="async" />
         <div class="cover-fade"></div>
       </div>
-      <div class="bar" aria-hidden="true"></div>
       <div class="inner">
         <span class="wm" aria-hidden="true">{c.nameLocal}</span>
         <div class="top">
@@ -55,6 +54,16 @@
     height: 108px;
     overflow: hidden;
   }
+  .cover-wrap::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    z-index: 2;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
+  }
   .cover {
     width: 100%;
     height: 100%;
@@ -67,19 +76,14 @@
     inset: 0;
     background: linear-gradient(180deg, transparent 20%, var(--surface) 100%);
   }
-  .bar {
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
-  }
   .inner {
-    padding: 14px 18px 18px;
+    padding: 16px 18px 18px;
     position: relative;
-    margin-top: -24px;
   }
   .wm {
     position: absolute;
     right: 10px;
-    top: -8px;
+    top: 4px;
     font-family: var(--hanzi);
     font-size: 3.2rem;
     font-weight: 600;

@@ -40,6 +40,8 @@
       <span class="prose-label">In breve</span>
       <p class="prose-body">{poi.blurb}</p>
     </aside>
+  {:else}
+    <p class="no-blurb muted">Descrizione in arrivo — controlla la guida della città per più dettagli.</p>
   {/if}
 
   <div class="facts">
@@ -88,6 +90,15 @@
     text-shadow: 0 0 24px rgba(63, 168, 122, 0.2);
   }
   .stars { color: var(--gold); letter-spacing: 3px; margin-top: 8px; font-size: 14px; }
+  .no-blurb {
+    font-size: 0.9rem;
+    font-style: italic;
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    background: var(--paper-2);
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--line-strong);
+  }
   .facts { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
   .fact {
     background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
