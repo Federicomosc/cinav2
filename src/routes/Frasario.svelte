@@ -64,7 +64,7 @@
 </div>
 
 {#if !query.trim() && !onlyFav && hotelsWithAddr.length}
-  <h3 class="cat">Indirizzi alloggi</h3>
+  <h3 class="section-cat">Indirizzi alloggi</h3>
   <div class="list">
     {#each hotelsWithAddr as a (a.id)}
       <button class="frase" onclick={() => (big = { hanzi: a.addressLocal!, it: a.name })}>
@@ -78,7 +78,7 @@
 {/if}
 
 {#each grouped as [cat, list] (cat)}
-  <h3 class="cat">{catLabel[cat]}</h3>
+  <h3 class="section-cat">{catLabel[cat]}</h3>
   <div class="list">
     {#each list as f (f.hanzi)}
       <div class="frase">

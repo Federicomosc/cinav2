@@ -37,12 +37,13 @@
     margin: -4px -4px 10px;
     padding: 9px 14px;
     background: rgba(20, 16, 12, 0.95);
-    border: 1px solid rgba(224, 74, 40, 0.35);
+    border: 1px solid rgba(232, 72, 40, 0.4);
     border-radius: var(--radius-sm);
     font-size: 0.78rem;
     line-height: 1.4;
     color: var(--ink-soft);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(232, 72, 40, 0.1);
   }
   .ic { font-size: 14px; flex: none; }
   .txt strong { color: var(--cinabro-bright); font-weight: 600; }

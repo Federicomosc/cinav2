@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { liveQuery } from 'dexie';
   import PageHeader from '../components/PageHeader.svelte';
-  import AirplaneTest from '../components/AirplaneTest.svelte';
   import { db, uid, now, type ChecklistItem, type SecureDoc } from '../db/dexie';
   import { deriveKey, makeVerifier, checkVerifier, encryptBytes, decryptBytes, randomBytes } from '../lib/crypto';
 
@@ -23,10 +22,10 @@
     'Assicurazione viaggio',
     '~100 RMB contanti di backup',
     'App cinesi installate (Alipay/WeChat/DiDi)',
-    'TEST in modalità aereo superato',
   ];
   let checklist = $state<ChecklistItem[]>([]);
-  const doneCount = $derived(checklist.filter((c) => c.done).length);
+  const doneCount = $derived(checklist.filter((c) => !/modalità aereo/i.test(c.label)).filter((c) => c.done).length);
+  const checklistVisible = $derived(checklist.filter((c) => !/modalità aereo/i.test(c.label)));
 
   // ── Vault cifrato ────────────────────────────────────────────────────
   type VaultState = 'loading' | 'setup' | 'locked' | 'unlocked';
@@ -51,12 +50,6 @@
   onMount(() => {
     void ensureChecklist();
     void loadVault();
-    if (sessionStorage.getItem('docs-scroll') === 'airplane') {
-      sessionStorage.removeItem('docs-scroll');
-      requestAnimationFrame(() => {
-        document.getElementById('test-aereo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    }
     const subC = liveQuery(() => db.checklist.orderBy('order').toArray()).subscribe(
       (v) => (checklist = v),
     );
@@ -159,13 +152,11 @@
 
 <PageHeader eyebrow="🔒 cifrato lato client" title="Documenti" />
 
-<AirplaneTest />
-
 <!-- Checklist -->
 <section class="card">
-  <div class="eyebrow">Checklist pre-partenza · {doneCount}/{checklist.length}</div>
+  <div class="eyebrow">Checklist pre-partenza · {doneCount}/{checklistVisible.length}</div>
   <div class="checks">
-    {#each checklist as c (c.id)}
+    {#each checklistVisible as c (c.id)}
       <button class="check" class:done={c.done} onclick={() => db.checklist.update(c.id, { done: !c.done })}>
         <span class="box">{c.done ? '✓' : ''}</span>
         <span class="lbl">{c.label}</span>

@@ -54,23 +54,28 @@
     width: 100%;
     display: flex;
     justify-content: center;
-    padding: 6px 12px calc(8px + var(--safe-bottom));
+    padding: 6px 12px 0;
     background: linear-gradient(180deg, transparent 0%, rgba(12, 9, 7, 0.92) 35%);
     pointer-events: none;
   }
   .nav-inner {
     pointer-events: auto;
     display: flex;
-    align-items: stretch;
+    align-items: flex-start;
     width: 100%;
     max-width: 456px;
-    height: var(--nav-h);
-    background: rgba(18, 14, 10, 0.88);
-    backdrop-filter: saturate(1.5) blur(20px);
-    -webkit-backdrop-filter: saturate(1.5) blur(20px);
+    min-height: calc(var(--nav-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: rgba(22, 17, 13, 0.92);
+    backdrop-filter: saturate(1.6) blur(24px);
+    -webkit-backdrop-filter: saturate(1.6) blur(24px);
     border: 1px solid var(--line-strong);
-    border-radius: 22px;
-    box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+    border-radius: 22px 22px 0 0;
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 -8px 32px rgba(232, 72, 40, 0.06);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -79,6 +84,7 @@
     position: relative;
     flex: 1;
     min-width: 54px;
+    height: var(--nav-h);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -90,12 +96,30 @@
   }
   .item.active { color: var(--cinabro-bright); }
   .ic {
+    position: relative;
     display: grid;
     place-items: center;
-    opacity: 0.75;
+    width: 36px;
+    height: 36px;
+    opacity: 0.7;
     transition: opacity 0.2s, transform 0.2s var(--ease);
   }
-  .item.active .ic { opacity: 1; transform: scale(1.05); }
+  .item.active .ic {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  .item.active .ic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--cinabro-soft);
+    box-shadow: 0 0 14px var(--cinabro-glow);
+  }
+  .item.active .ic :global(svg) {
+    position: relative;
+    z-index: 1;
+  }
   .lbl {
     font-family: var(--mono);
     font-size: 9px;

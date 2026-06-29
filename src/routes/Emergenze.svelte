@@ -38,7 +38,7 @@
 
 <PageHeader eyebrow="✚ sempre offline" title="Emergenze" sub="Numeri grandi e toccabili. Funziona senza rete." />
 
-<h3 class="cat">Emergenze cinesi</h3>
+<h3 class="section-cat">Emergenze cinesi</h3>
 <div class="grid">
   {#each emergenze.cinesi as e (e.number)}
     <a class="num card" href={`tel:${e.number}`}>
@@ -48,7 +48,7 @@
   {/each}
 </div>
 
-<h3 class="cat">Rete consolare italiana</h3>
+<h3 class="section-cat">Rete consolare italiana</h3>
 <div class="list">
   {#each emergenze.consolari as c (c.name + c.city)}
     <article class="card">
@@ -64,7 +64,7 @@
   {/each}
 </div>
 
-<h3 class="cat">Schede mediche</h3>
+<h3 class="section-cat">Schede mediche</h3>
 <p class="muted hint">Da mostrare al personale sanitario — etichette anche in cinese.</p>
 <div class="list">
   {#each members as m (m)}

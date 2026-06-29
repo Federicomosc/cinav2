@@ -2,3 +2,49 @@
 [  585563ms] [WARNING] Another connection wants to upgrade database 'cina-tour-2026'. Closing db now to resume the upgrade. @ http://localhost:5173/@vite/client:524
 [  585563ms] [WARNING] Another connection wants to upgrade database 'cina-tour-2026'. Closing db now to resume the upgrade. @ http://localhost:5173/@vite/client:524
 [  774210ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:992
+[ 1871685ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:992
+[ 1871686ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:5173/src/components/OfflineBanner.svelte:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Frasario.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/mapStyle.ts:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/online.svelte.ts:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/spese.ts:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Spese.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Oggi.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Mappa.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Emergenze.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/crypto.ts:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Documenti.svelte?svelte&type=style&lang.css:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/poi.json?import:0
+[ 1871690ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/citta-content.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/giorni.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/poiImage.ts:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/PoiPhoto.svelte?svelte&type=style&lang.css:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/routes/Citta.svelte?svelte&type=style&lang.css:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/itinerario.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/transport.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/frasi.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/citta.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/alloggi.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/viaggio-meta.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/data/emergenze.json?import:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/BigChars.svelte?t=1782749608886&svelte&type=style&lang.css:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/PageHeader.svelte:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/lib/speak.ts:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/node_modules/maplibre-gl/dist/maplibre-gl.css:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/AirplaneTest.svelte:0
+[ 1871691ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/Stub.svelte:0
+[ 1871692ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/app-icon.svg:0
+[ 1933927ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:5173/src/components/BigChars.svelte?t=1782749671368&svelte&type=style&lang.css:0
+[ 1933927ms] [ERROR] [vite] Failed to reload /src/components/BigChars.svelte?svelte&type=style&lang.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:928
+[ 1933927ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:992
+[ 2476937ms] [ERROR] [vite] SyntaxError: The requested module '/src/lib/poiImage.ts' does not provide an export named 'poiHasImage' @ http://localhost:5173/@vite/client:928
+[ 2476937ms] [ERROR] [vite] Failed to reload /src/components/PoiPhoto.svelte. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:928
+[ 2476938ms] TypeError: Cannot read properties of undefined (reading 'default')
+    at http://localhost:5173/src/components/PoiPhoto.svelte?t=1782750037820:84:33
+    at http://localhost:5173/@vite/client:76:58
+    at http://localhost:5173/@vite/client:222:52
+    at http://localhost:5173/@vite/client:200:55
+    at Array.forEach (<anonymous>)
+    at HMRClient.queueUpdate (http://localhost:5173/@vite/client:200:33)
+    at async Promise.all (index 0)
+    at async handleMessage (http://localhost:5173/@vite/client:966:4)

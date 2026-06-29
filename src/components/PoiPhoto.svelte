@@ -12,71 +12,86 @@
 
   let { id, category, name, variant = 'hero' }: Props = $props();
 
-  let failed = $state(false);
   const color = $derived(CAT_COLOR[category]);
   const icon = $derived(CAT_ICON[category]);
+
+  let loaded = $state(false);
+  let failed = $state(false);
+
+  $effect(() => {
+    id;
+    loaded = false;
+    failed = false;
+  });
 </script>
 
-{#if !failed}
-  <img
-    class={variant}
-    src={poiImageSrc(id)}
-    alt=""
-    loading="lazy"
-    decoding="async"
-    onerror={() => (failed = true)}
-  />
-{:else}
-  <div class="placeholder {variant}" style="--c:{color}" aria-hidden="true">
+<div class="frame" class:thumb={variant === 'thumb'} class:hero={variant === 'hero'}>
+  <div class="placeholder" style="--c:{color}" aria-hidden="true">
     <span class="ic">{icon}</span>
-    <span class="lbl">{name}</span>
   </div>
-{/if}
+  {#if !failed}
+    <img
+      src={poiImageSrc(id)}
+      alt=""
+      class:show={loaded}
+      loading="lazy"
+      decoding="async"
+      onload={() => (loaded = true)}
+      onerror={() => (failed = true)}
+    />
+  {/if}
+</div>
 
 <style>
-  img.hero, .placeholder.hero {
-    display: block;
+  .frame {
+    position: relative;
+    overflow: hidden;
+    flex: none;
+  }
+  .frame.hero {
     width: 100%;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line-strong);
     aspect-ratio: 16 / 9;
     max-height: 220px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
     margin-bottom: 14px;
   }
-  img.thumb, .placeholder.thumb {
-    display: block;
-    width: 52px;
-    height: 52px;
-    flex: none;
-    object-fit: cover;
-    border-radius: 10px;
+  .frame.thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
     border: 1px solid var(--line-strong);
   }
   .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    background: linear-gradient(145deg, color-mix(in srgb, var(--c) 22%, var(--surface)) 0%, var(--surface) 100%);
-    overflow: hidden;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--c) 30%, var(--surface-hi)) 0%,
+      var(--surface) 100%
+    );
   }
-  .placeholder.thumb { gap: 0; }
-  .ic { font-size: 1.6rem; line-height: 1; }
-  .placeholder.thumb .ic { font-size: 1.1rem; }
-  .lbl {
-    font-family: var(--mono);
-    font-size: 8px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    text-align: center;
-    padding: 0 6px;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.2s var(--ease);
   }
-  .placeholder.thumb .lbl { display: none; }
+  .frame img.show {
+    opacity: 1;
+  }
+  .frame.thumb .ic {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .frame.hero .ic {
+    font-size: 2.4rem;
+    line-height: 1;
+    opacity: 0.85;
+  }
 </style>

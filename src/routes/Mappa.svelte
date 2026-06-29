@@ -248,7 +248,7 @@
       badge.className = 'poi-badge';
       badge.textContent = CAT_ICON[p.category];
       const label = document.createElement('div');
-      label.className = 'poi-name';
+      label.className = 'pin-label';
       label.textContent = p.name;
       el.append(badge, label);
       el.title = p.name;
@@ -420,7 +420,7 @@
   .map-wrap { position: relative; }
   .map {
     width: 100%;
-    height: calc(100svh - var(--nav-h) - var(--safe-top) - var(--safe-bottom) - 180px);
+    height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 200px);
     min-height: 300px;
     border-radius: var(--radius-md);
     overflow: hidden;
@@ -541,7 +541,7 @@
     display: grid; place-items: center; font-size: 15px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   }
-  :global(.poi-name) {
+  :global(.pin-label) {
     position: absolute; left: 0; top: 18px; transform: translateX(-50%);
     white-space: nowrap; font-family: var(--mono); font-size: 10px; font-weight: 600;
     color: #fff; background: rgba(12, 9, 7, 0.88); padding: 3px 8px; border-radius: 6px;
@@ -553,8 +553,8 @@
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 45%, transparent), 0 4px 14px rgba(0, 0, 0, 0.5);
     z-index: 2;
   }
-  .map.hide-names :global(.poi-name) { display: none; }
-  .map.hide-names :global(.poi-pin.focused .poi-name) { display: block; }
+  .map.hide-names :global(.pin-label) { display: none; }
+  .map.hide-names :global(.poi-pin.focused .pin-label) { display: block; }
   :global(.user-dot) {
     width: 16px; height: 16px; border-radius: 50%;
     background: #3b8bff; border: 3px solid #fff;

@@ -28,14 +28,19 @@
   <button class="back-link" onclick={() => go('citta', poi.city)}>{city?.name ?? 'Indietro'}</button>
 
   <header class="head">
-    <span class="cat" style="background:{CAT_COLOR[poi.category]}">{CAT_LABEL[poi.category]}</span>
+    <span class="poi-tag" style="background:{CAT_COLOR[poi.category]}">{CAT_LABEL[poi.category]}</span>
     <PoiPhoto id={poi.id} category={poi.category} name={poi.name} variant="hero" />
     <h1>{poi.name}</h1>
     {#if poi.nameLocal}<p class="cn">{poi.nameLocal}</p>{/if}
     {#if poi.stars}<div class="stars">{stars(poi.stars)}</div>{/if}
   </header>
 
-  {#if poi.blurb}<p class="blurb">{poi.blurb}</p>{/if}
+  {#if poi.blurb}
+    <aside class="prose-block" style="--prose-accent: {CAT_COLOR[poi.category]}" aria-label="Descrizione">
+      <span class="prose-label">In breve</span>
+      <p class="prose-body">{poi.blurb}</p>
+    </aside>
+  {/if}
 
   <div class="facts">
     {#if poi.price}<div class="fact"><span class="k">Prezzo</span><span class="v">{poi.price}</span></div>{/if}
@@ -61,7 +66,7 @@
 
 <style>
   .head { padding-top: 4px; }
-  .cat {
+  .poi-tag {
     display: inline-block;
     font-family: var(--mono);
     font-size: 9px;
@@ -73,10 +78,16 @@
     padding: 4px 12px;
     margin-bottom: 4px;
   }
-  h1 { font-size: 2.1rem; margin: 10px 0 4px; }
-  .cn { font-family: var(--hanzi); font-size: 1.4rem; color: var(--jade-bright); margin-top: 4px; }
+  h1 { font-size: 2.1rem; margin: 10px 0 4px; letter-spacing: -0.02em; }
+  .cn {
+    font-family: var(--hanzi);
+    font-size: 1.45rem;
+    font-weight: 500;
+    color: var(--jade-bright);
+    margin-top: 4px;
+    text-shadow: 0 0 24px rgba(63, 168, 122, 0.2);
+  }
   .stars { color: var(--gold); letter-spacing: 3px; margin-top: 8px; font-size: 14px; }
-  .blurb { font-size: 0.98rem; margin: 16px 0; color: var(--ink-soft); line-height: 1.65; }
   .facts { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
   .fact {
     background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);

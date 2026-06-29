@@ -10,12 +10,12 @@
 <header class="ph">
   <div class="deco" aria-hidden="true">
     <span class="line"></span>
-    <span class="diamond"></span>
+    <span class="seal">旅</span>
     <span class="line"></span>
   </div>
   {#if eyebrow}<div class="eyebrow">{eyebrow}</div>{/if}
   <h1>{title}</h1>
-  {#if sub}<p class="muted sub">{sub}</p>{/if}
+  {#if sub}<p class="sub prose-lead">{sub}</p>{/if}
 </header>
 
 <style>
@@ -23,33 +23,39 @@
   .deco {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 14px;
   }
   .line {
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+    background: linear-gradient(90deg, transparent, var(--line-strong) 30%, var(--cinabro-soft) 50%, var(--line-strong) 70%, transparent);
   }
-  .diamond {
-    width: 7px;
-    height: 7px;
-    background: var(--cinabro);
-    transform: rotate(45deg);
-    box-shadow: 0 0 12px var(--cinabro-glow);
+  .seal {
     flex: none;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    font-family: var(--hanzi);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cinabro-bright);
+    background: var(--cinabro-soft);
+    border: 1px solid rgba(232, 72, 40, 0.28);
+    border-radius: 6px;
+    box-shadow: 0 0 16px var(--cinabro-glow);
   }
   h1 {
     font-size: 2.25rem;
     margin: 6px 0 4px;
-    background: linear-gradient(135deg, var(--ink) 30%, var(--ink-soft) 100%);
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-soft) 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .sub {
-    font-size: 0.92rem;
-    line-height: 1.5;
-    max-width: 32ch;
+    max-width: 34ch;
+    margin-top: 2px;
   }
 </style>
