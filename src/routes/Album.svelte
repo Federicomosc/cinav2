@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { liveQuery } from 'dexie';
   import PageHeader from '../components/PageHeader.svelte';
   import EmptyState from '../components/EmptyState.svelte';
@@ -7,21 +8,27 @@
   let photos = $state<Photo[]>([]);
   let urls = $state<Map<string, string>>(new Map());
 
-  $effect(() => {
-    const sub = liveQuery(() => db.photos.orderBy('takenAt').reverse().toArray()).subscribe((v) => {
-      photos = v;
-    });
-    return () => sub.unsubscribe();
-  });
-
-  $effect(() => {
+  function setPhotoUrls(list: Photo[]) {
+    for (const u of urls.values()) URL.revokeObjectURL(u);
+    if (list.length === 0) {
+      if (urls.size > 0) urls = new Map();
+      return;
+    }
     const next = new Map<string, string>();
-    for (const p of photos) {
+    for (const p of list) {
       next.set(p.id, URL.createObjectURL(p.thumb ?? p.blob));
     }
     urls = next;
+  }
+
+  onMount(() => {
+    const sub = liveQuery(() => db.photos.orderBy('takenAt').reverse().toArray()).subscribe((v) => {
+      photos = v;
+      setPhotoUrls(v);
+    });
     return () => {
-      for (const u of next.values()) URL.revokeObjectURL(u);
+      sub.unsubscribe();
+      for (const u of urls.values()) URL.revokeObjectURL(u);
     };
   });
 

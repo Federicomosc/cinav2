@@ -81,34 +81,44 @@
   let showResetConfirm = $state(false);
   let resetConfirmOpening = false;
   let thumbUrls = $state(new Map<string, string>());
+  const thumbLoading = new Set<string>();
 
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
   function clearThumbs() {
+    if (thumbUrls.size === 0) return;
     for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
     thumbUrls = new Map();
+    thumbLoading.clear();
   }
 
   async function ensureThumb(doc: SecureDoc) {
-    if (!key || thumbUrls.has(doc.id) || !doc.mime.startsWith('image/')) return;
+    if (!key || thumbUrls.has(doc.id) || thumbLoading.has(doc.id) || !doc.mime.startsWith('image/')) {
+      return;
+    }
+    thumbLoading.add(doc.id);
     try {
       const buf = await decryptBytes(key, normalizeIv(doc.iv), normalizeCipher(doc.cipher));
       const blob = new Blob([buf], { type: doc.mime });
       const url = URL.createObjectURL(blob);
-      thumbUrls.set(doc.id, url);
-      thumbUrls = new Map(thumbUrls);
+      if (!key) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const next = new Map(thumbUrls);
+      next.set(doc.id, url);
+      thumbUrls = next;
     } catch {
       /* anteprima opzionale */
+    } finally {
+      thumbLoading.delete(doc.id);
     }
   }
 
-  $effect(() => {
-    if (vstate !== 'unlocked' || !key) {
-      clearThumbs();
-      return;
-    }
-    for (const d of docs) void ensureThumb(d);
-  });
+  function refreshThumbs(list: SecureDoc[]) {
+    if (vstate !== 'unlocked' || !key) return;
+    for (const d of list) void ensureThumb(d);
+  }
 
   onMount(() => {
     void ensureChecklist();
@@ -127,7 +137,10 @@
     );
     const subD = liveQuery(() => db.documents.toArray()).subscribe((v) => {
       docs = v;
-      if (vstate === 'unlocked') void syncChecklistFromDocs(v);
+      if (vstate === 'unlocked') {
+        void syncChecklistFromDocs(v);
+        refreshThumbs(v);
+      }
     });
 
     return () => {
@@ -172,12 +185,17 @@
   }
 
   async function loadVault() {
-    const rec = await db.meta.get('vault');
-    if (rec) {
-      vault = rec.value as Vault;
-      vstate = 'locked';
-    } else {
+    try {
+      const rec = await db.meta.get('vault');
+      if (rec) {
+        vault = rec.value as Vault;
+        vstate = 'locked';
+      } else {
+        vstate = 'setup';
+      }
+    } catch {
       vstate = 'setup';
+      err = 'Impossibile caricare la cassaforte.';
     }
   }
 
@@ -197,6 +215,7 @@
       pw = pw2 = '';
       resetIdleLock();
       await syncChecklistFromDocs(docs);
+      refreshThumbs(docs);
     } finally {
       busy = false;
     }
@@ -214,6 +233,7 @@
         pw = '';
         resetIdleLock();
         await syncChecklistFromDocs(docs);
+        refreshThumbs(docs);
       } else {
         err = 'Password errata.';
       }
