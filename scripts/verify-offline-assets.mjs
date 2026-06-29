@@ -49,11 +49,17 @@ const phrasesDir = path.join(publicDir, 'phrases');
 const phrases = fs.existsSync(phrasesDir)
   ? fs.readdirSync(phrasesDir).filter((f) => f.endsWith('.m4a'))
   : [];
-if (phrases.length >= 17) {
-  console.log(`✓ Audio frasi — ${phrases.length} clip in public/phrases/`);
+const frasiJson = JSON.parse(fs.readFileSync(path.join(root, 'src/data/frasi.json'), 'utf8'));
+const expectedPhrases = frasiJson.length;
+const withAudio = frasiJson.filter((f) => f.audio).length;
+if (phrases.length >= expectedPhrases) {
+  console.log(`✓ Audio frasi — ${phrases.length}/${expectedPhrases} clip in public/phrases/`);
+  ok++;
+} else if (phrases.length >= withAudio) {
+  console.log(`⚠ Audio frasi — ${phrases.length}/${expectedPhrases} clip (${expectedPhrases - phrases.length} nuove frasi senza audio). Esegui: npm run phrases:audio`);
   ok++;
 } else {
-  console.error(`✗ Audio frasi — trovate ${phrases.length}/17. Esegui: npm run phrases:audio`);
+  console.error(`✗ Audio frasi — trovate ${phrases.length}/${withAudio} con audio definito. Esegui: npm run phrases:audio`);
   fail++;
 }
 

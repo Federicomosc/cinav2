@@ -125,5 +125,528 @@
     "pinyin": "Dìtiězhàn zài nǎlǐ?",
     "hanzi": "地铁站在哪里？",
     "audio": "17-地铁站在哪里.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Per favore",
+    "pinyin": "Qǐng",
+    "hanzi": "请",
+    "audio": "18-请.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Prego / Di niente",
+    "pinyin": "Bù kèqi",
+    "hanzi": "不客气",
+    "audio": "19-不客气.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Sì",
+    "pinyin": "Shì",
+    "hanzi": "是",
+    "audio": "20-是.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "No",
+    "pinyin": "Bù shì",
+    "hanzi": "不是",
+    "audio": "21-不是.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Non capisco",
+    "pinyin": "Wǒ bù míngbai",
+    "hanzi": "我不明白",
+    "showBig": true,
+    "audio": "22-我不明白.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Può ripetere?",
+    "pinyin": "Kěyǐ zài shuō yī biàn ma?",
+    "hanzi": "可以再说一遍吗？",
+    "audio": "23-可以再说一遍吗.m4a"
+  },
+  {
+    "cat": "base",
+    "it": "Parla inglese?",
+    "pinyin": "Nǐ huì shuō Yīngyǔ ma?",
+    "hanzi": "你会说英语吗？",
+    "showBig": true,
+    "audio": "24-你会说英语吗.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "Usa il tassametro",
+    "pinyin": "Qǐng dǎbiǎo",
+    "hanzi": "请打表",
+    "showBig": true,
+    "audio": "25-请打表.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "Può aspettare?",
+    "pinyin": "Kěyǐ děng yīxià ma?",
+    "hanzi": "可以等一下吗？",
+    "audio": "26-可以等一下吗.m4a"
+  },
+  {
+    "cat": "taxi",
+    "it": "A quanto siamo?",
+    "pinyin": "Xiànzài duōshao qián?",
+    "hanzi": "现在多少钱？",
+    "audio": "27-现在多少钱.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Sono vegetariano",
+    "pinyin": "Wǒ shì sùshí zhě",
+    "hanzi": "我是素食者",
+    "showBig": true,
+    "audio": "28-我是素食者.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Senza glutine",
+    "pinyin": "Wú gūmì",
+    "hanzi": "无麸质",
+    "audio": "29-无麸质.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Acqua naturale",
+    "pinyin": "Kuàngquánshuǐ",
+    "hanzi": "矿泉水",
+    "audio": "30-矿泉水.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Birra per favore",
+    "pinyin": "Qǐng gěi wǒ píjiǔ",
+    "hanzi": "请给我啤酒",
+    "audio": "31-请给我啤酒.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "È delizioso",
+    "pinyin": "Hěn hǎochī",
+    "hanzi": "很好吃",
+    "audio": "32-很好吃.m4a"
+  },
+  {
+    "cat": "ristorante",
+    "it": "Da asporto / Porta via",
+    "pinyin": "Dǎbāo",
+    "hanzi": "打包",
+    "audio": "33-打包.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "Ho una prenotazione",
+    "pinyin": "Wǒ yǒu yùdìng",
+    "hanzi": "我有预订",
+    "showBig": true,
+    "audio": "34-我有预订.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "Check-in, per favore",
+    "pinyin": "Wǒ yào rùzhù",
+    "hanzi": "我要入住",
+    "showBig": true,
+    "audio": "35-我要入住.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "Check-out",
+    "pinyin": "Wǒ yào tuìfáng",
+    "hanzi": "我要退房",
+    "audio": "36-我要退房.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "La chiave della camera",
+    "pinyin": "Fángjiān yàoshi",
+    "hanzi": "房间钥匙",
+    "audio": "37-房间钥匙.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "C'è il WiFi?",
+    "pinyin": "Yǒu wúxiàn wǎngluò ma?",
+    "hanzi": "有无线网络吗？",
+    "audio": "38-有无线网络吗.m4a"
+  },
+  {
+    "cat": "alloggio",
+    "it": "La colazione è inclusa?",
+    "pinyin": "Zǎocān bāohán ma?",
+    "hanzi": "早餐包含吗？",
+    "audio": "39-早餐包含吗.m4a"
+  },
+  {
+    "cat": "acquisti",
+    "it": "Posso provare?",
+    "pinyin": "Kěyǐ shì yīxià ma?",
+    "hanzi": "可以试一下吗？",
+    "audio": "40-可以试一下吗.m4a"
+  },
+  {
+    "cat": "acquisti",
+    "it": "Avete taglia M?",
+    "pinyin": "Yǒu M hào ma?",
+    "hanzi": "有M号吗？",
+    "audio": "41-有m号吗.m4a"
+  },
+  {
+    "cat": "acquisti",
+    "it": "Può fare uno sconto?",
+    "pinyin": "Kěyǐ piányi yīdiǎn ma?",
+    "hanzi": "可以便宜一点吗？",
+    "audio": "42-可以便宜一点吗.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Mi sono perso",
+    "pinyin": "Wǒ mílù le",
+    "hanzi": "我迷路了",
+    "showBig": true,
+    "audio": "43-我迷路了.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Ho perso il passaporto",
+    "pinyin": "Wǒ diū le hùzhào",
+    "hanzi": "我护照丢了",
+    "showBig": true,
+    "audio": "44-我护照丢了.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Dov'è l'ospedale?",
+    "pinyin": "Yīyuàn zài nǎlǐ?",
+    "hanzi": "医院在哪里？",
+    "showBig": true,
+    "audio": "45-医院在哪里.m4a"
+  },
+  {
+    "cat": "emergenze",
+    "it": "Chiamate un'ambulanza",
+    "pinyin": "Qǐng jiào jiùhùchē",
+    "hanzi": "请叫救护车",
+    "showBig": true,
+    "audio": "46-请叫救护车.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "È lontano?",
+    "pinyin": "Yuǎn ma?",
+    "hanzi": "远吗？",
+    "audio": "47-远吗.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "A piedi quanto ci vuole?",
+    "pinyin": "Zǒulù yào duōjiǔ?",
+    "hanzi": "走路要多久？",
+    "audio": "48-走路要多久.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "Gira a destra",
+    "pinyin": "Xiàng yòu zhuǎn",
+    "hanzi": "向右转",
+    "audio": "49-向右转.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "Gira a sinistra",
+    "pinyin": "Xiàng zuǒ zhuǎn",
+    "hanzi": "向左转",
+    "audio": "50-向左转.m4a"
+  },
+  {
+    "cat": "indicazioni",
+    "it": "Vai dritto",
+    "pinyin": "Zhí zǒu",
+    "hanzi": "直走",
+    "audio": "51-直走.m4a"
+  },
+  {
+    "cat": "aeroporto",
+    "it": "Dov'è il gate?",
+    "pinyin": "Dēngjīkǒu zài nǎlǐ?",
+    "hanzi": "登机口在哪里？",
+    "showBig": true,
+    "audio": "52-登机口在哪里.m4a"
+  },
+  {
+    "cat": "aeroporto",
+    "it": "Controllo passaporti",
+    "pinyin": "Hùzhào jiǎnchá",
+    "hanzi": "护照检查",
+    "audio": "53-护照检查.m4a"
+  },
+  {
+    "cat": "aeroporto",
+    "it": "Devo fare il check-in",
+    "pinyin": "Wǒ yào bànlǐ dēngjī shǒuxù",
+    "hanzi": "我要办理登机手续",
+    "showBig": true,
+    "audio": "54-我要办理登机手续.m4a"
+  },
+  {
+    "cat": "aeroporto",
+    "it": "Valigia persa",
+    "pinyin": "Wǒ de xíngli diū le",
+    "hanzi": "我的行李丢了",
+    "showBig": true,
+    "audio": "55-我的行李丢了.m4a"
+  },
+  {
+    "cat": "aeroporto",
+    "it": "Dove ritiro i bagagli?",
+    "pinyin": "Xíngli tíqǔ zài nǎlǐ?",
+    "hanzi": "行李提取在哪里？",
+    "audio": "56-行李提取在哪里.m4a"
+  },
+  {
+    "cat": "hotel",
+    "it": "Una camera singola",
+    "pinyin": "Dānrén fáng",
+    "hanzi": "单人房",
+    "audio": "57-单人房.m4a"
+  },
+  {
+    "cat": "hotel",
+    "it": "Una camera doppia",
+    "pinyin": "Shuāngrén fáng",
+    "hanzi": "双人房",
+    "audio": "58-双人房.m4a"
+  },
+  {
+    "cat": "hotel",
+    "it": "Due notti",
+    "pinyin": "Liǎng wǎn",
+    "hanzi": "两晚",
+    "audio": "59-两晚.m4a"
+  },
+  {
+    "cat": "hotel",
+    "it": "Ascensore?",
+    "pinyin": "Yǒu diàntī ma?",
+    "hanzi": "有电梯吗？",
+    "audio": "60-有电梯吗.m4a"
+  },
+  {
+    "cat": "metro",
+    "it": "Un biglietto, per favore",
+    "pinyin": "Mǎi yī zhāng piào",
+    "hanzi": "买一张票",
+    "audio": "61-买一张票.m4a"
+  },
+  {
+    "cat": "metro",
+    "it": "Quale linea devo prendere?",
+    "pinyin": "Wǒ yīnggāi zuò nǎ tiáo xiàn?",
+    "hanzi": "我应该坐哪条线？",
+    "audio": "62-我应该坐哪条线.m4a"
+  },
+  {
+    "cat": "metro",
+    "it": "Dove cambio linea?",
+    "pinyin": "Zài nǎlǐ huàn chéng?",
+    "hanzi": "在哪里换乘？",
+    "audio": "63-在哪里换乘.m4a"
+  },
+  {
+    "cat": "metro",
+    "it": "Uscita",
+    "pinyin": "Chūkǒu",
+    "hanzi": "出口",
+    "audio": "64-出口.m4a"
+  },
+  {
+    "cat": "metro",
+    "it": "Entrata",
+    "pinyin": "Rùkǒu",
+    "hanzi": "入口",
+    "audio": "65-入口.m4a"
+  },
+  {
+    "cat": "salute",
+    "it": "Dov'è la farmacia?",
+    "pinyin": "Yàodiàn zài nǎlǐ?",
+    "hanzi": "药店在哪里？",
+    "showBig": true,
+    "audio": "66-药店在哪里.m4a"
+  },
+  {
+    "cat": "salute",
+    "it": "Mi fa male lo stomaco",
+    "pinyin": "Wǒ dùzi téng",
+    "hanzi": "我肚子疼",
+    "showBig": true,
+    "audio": "67-我肚子疼.m4a"
+  },
+  {
+    "cat": "salute",
+    "it": "Sono allergico",
+    "pinyin": "Wǒ guòmǐn",
+    "hanzi": "我过敏",
+    "showBig": true,
+    "audio": "68-我过敏.m4a"
+  },
+  {
+    "cat": "salute",
+    "it": "Ho la febbre",
+    "pinyin": "Wǒ fāshāo le",
+    "hanzi": "我发烧了",
+    "showBig": true,
+    "audio": "69-我发烧了.m4a"
+  },
+  {
+    "cat": "salute",
+    "it": "Mal di testa",
+    "pinyin": "Wǒ tóu téng",
+    "hanzi": "我头疼",
+    "audio": "70-我头疼.m4a"
+  },
+  {
+    "cat": "turismo",
+    "it": "Due biglietti adulti",
+    "pinyin": "Liǎng zhāng chéngrén piào",
+    "hanzi": "两张成人票",
+    "audio": "71-两张成人票.m4a"
+  },
+  {
+    "cat": "turismo",
+    "it": "È aperto oggi?",
+    "pinyin": "Jīntiān kāimén ma?",
+    "hanzi": "今天开放吗？",
+    "audio": "72-今天开放吗.m4a"
+  },
+  {
+    "cat": "turismo",
+    "it": "Posso fare una foto?",
+    "pinyin": "Kěyǐ pāizhào ma?",
+    "hanzi": "可以拍照吗？",
+    "audio": "73-可以拍照吗.m4a"
+  },
+  {
+    "cat": "turismo",
+    "it": "Quanto tempo per la visita?",
+    "pinyin": "Cānguān xūyào duō cháng shíjiān?",
+    "hanzi": "参观需要多长时间？",
+    "audio": "74-参观需要多长时间.m4a"
+  },
+  {
+    "cat": "turismo",
+    "it": "Guida in inglese?",
+    "pinyin": "Yǒu Yīngyǔ dǎoyóu ma?",
+    "hanzi": "有英语导游吗？",
+    "audio": "75-有英语导游吗.m4a"
+  },
+  {
+    "cat": "tecnologia",
+    "it": "Posso caricare il telefono?",
+    "pinyin": "Kěyǐ chōngdiàn ma?",
+    "hanzi": "可以充电吗？",
+    "audio": "76-可以充电吗.m4a"
+  },
+  {
+    "cat": "tecnologia",
+    "it": "Non ho internet",
+    "pinyin": "Wǒ méiyǒu wǎngluò",
+    "hanzi": "我没有网络",
+    "showBig": true,
+    "audio": "77-我没有网络.m4a"
+  },
+  {
+    "cat": "tecnologia",
+    "it": "Serve una presa",
+    "pinyin": "Wǒ xūyào yīgè chāzuò",
+    "hanzi": "我需要一个插座",
+    "audio": "78-我需要一个插座.m4a"
+  },
+  {
+    "cat": "tecnologia",
+    "it": "Acqua calda",
+    "pinyin": "Rè shuǐ",
+    "hanzi": "热水",
+    "audio": "79-热水.m4a"
+  },
+  {
+    "cat": "tempo",
+    "it": "Che tempo fa?",
+    "pinyin": "Tiānqì zěnmeyàng?",
+    "hanzi": "天气怎么样？",
+    "audio": "80-天气怎么样.m4a"
+  },
+  {
+    "cat": "tempo",
+    "it": "Fa troppo caldo",
+    "pinyin": "Tài rè le",
+    "hanzi": "太热了",
+    "audio": "81-太热了.m4a"
+  },
+  {
+    "cat": "tempo",
+    "it": "Piove",
+    "pinyin": "Xiàyǔ le",
+    "hanzi": "下雨了",
+    "audio": "82-下雨了.m4a"
+  },
+  {
+    "cat": "tempo",
+    "it": "Domani",
+    "pinyin": "Míngtiān",
+    "hanzi": "明天",
+    "audio": "83-明天.m4a"
+  },
+  {
+    "cat": "tempo",
+    "it": "Oggi",
+    "pinyin": "Jīntiān",
+    "hanzi": "今天",
+    "audio": "84-今天.m4a"
+  },
+  {
+    "cat": "social",
+    "it": "Piacere di conoscerti",
+    "pinyin": "Hěn gāoxìng rènshi nǐ",
+    "hanzi": "很高兴认识你",
+    "audio": "85-很高兴认识你.m4a"
+  },
+  {
+    "cat": "social",
+    "it": "Sono italiano",
+    "pinyin": "Wǒ shì Yìdàlì rén",
+    "hanzi": "我是意大利人",
+    "showBig": true,
+    "audio": "86-我是意大利人.m4a"
+  },
+  {
+    "cat": "social",
+    "it": "Auguri!",
+    "pinyin": "Gōngxǐ!",
+    "hanzi": "恭喜！",
+    "audio": "87-恭喜.m4a"
+  },
+  {
+    "cat": "social",
+    "it": "Scusa / Mi dispiace",
+    "pinyin": "Duìbuqǐ",
+    "hanzi": "对不起",
+    "audio": "88-对不起.m4a"
+  },
+  {
+    "cat": "social",
+    "it": "Va bene / OK",
+    "pinyin": "Hǎo de",
+    "hanzi": "好的",
+    "audio": "89-好的.m4a"
   }
 ]

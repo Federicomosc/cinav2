@@ -84,8 +84,25 @@ export interface CityContent {
   blocks: ContentBlock[];
 }
 
+export type FraseCat =
+  | 'base'
+  | 'taxi'
+  | 'ristorante'
+  | 'alloggio'
+  | 'acquisti'
+  | 'emergenze'
+  | 'indicazioni'
+  | 'aeroporto'
+  | 'hotel'
+  | 'metro'
+  | 'salute'
+  | 'turismo'
+  | 'tecnologia'
+  | 'tempo'
+  | 'social';
+
 export interface Frase {
-  cat: 'base' | 'taxi' | 'ristorante' | 'alloggio' | 'acquisti' | 'emergenze' | 'indicazioni';
+  cat: FraseCat;
   it: string;
   pinyin: string;
   hanzi: string;

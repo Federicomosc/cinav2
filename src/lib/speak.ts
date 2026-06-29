@@ -3,13 +3,17 @@ import type { Frase } from '../data/types';
 // Pronuncia di una frase. Preferisce una clip mp3 pre-registrata (offline, affidabile);
 // se manca, ripiega sul TTS del browser (zh-CN) — utile in sviluppo, ma sul campo la
 // sintesi cinese offline è inaffidabile, quindi le clip mp3 restano la strada giusta.
-export function speak(f: Frase): void {
-  if (f.audio) {
-    const audio = new Audio(`/phrases/${f.audio}`);
-    audio.play().catch(() => fallbackTTS(f.hanzi));
+export function speakHanzi(hanzi: string, audio?: string): void {
+  if (audio) {
+    const clip = new Audio(`/phrases/${audio}`);
+    clip.play().catch(() => fallbackTTS(hanzi));
     return;
   }
-  fallbackTTS(f.hanzi);
+  fallbackTTS(hanzi);
+}
+
+export function speak(f: Frase): void {
+  speakHanzi(f.hanzi, f.audio);
 }
 
 /** true se la frase ha una clip locale (m4a/mp3). */

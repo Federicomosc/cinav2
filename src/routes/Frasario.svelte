@@ -4,12 +4,15 @@
   import PageHeader from '../components/PageHeader.svelte';
   import BigChars from '../components/BigChars.svelte';
   import EmptyState from '../components/EmptyState.svelte';
-  import { frasi, alloggi } from '../lib/content';
+  import { frasi, alloggi, lessico } from '../lib/content';
   import { db, now } from '../db/dexie';
-  import { speak, hasLocalAudio } from '../lib/speak';
-  import type { Frase } from '../data/types';
+  import { speak, speakHanzi, hasLocalAudio } from '../lib/speak';
+  import { translateOffline } from '../lib/translate-offline';
+  import type { Frase, FraseCat } from '../data/types';
 
-  const catLabel: Record<Frase['cat'], string> = {
+  type Mode = 'frasi' | 'traduci';
+
+  const catLabel: Record<FraseCat, string> = {
     base: 'Base & cortesia',
     taxi: 'Taxi & trasporti',
     ristorante: 'Ristorante',
@@ -17,9 +20,17 @@
     acquisti: 'Acquisti',
     emergenze: 'Emergenze',
     indicazioni: 'Indicazioni',
+    aeroporto: 'Aeroporto',
+    hotel: 'Hotel',
+    metro: 'Metro',
+    salute: 'Salute',
+    turismo: 'Turismo',
+    tecnologia: 'Tecnologia',
+    tempo: 'Tempo & meteo',
+    social: 'Social',
   };
 
-  const catHue: Record<Frase['cat'], string> = {
+  const catHue: Record<FraseCat, string> = {
     base: 'var(--jade-bright)',
     taxi: 'var(--gold)',
     ristorante: 'var(--cinabro-bright)',
@@ -27,9 +38,19 @@
     acquisti: '#4fc3c7',
     emergenze: 'var(--cinabro)',
     indicazioni: 'var(--ink-soft)',
+    aeroporto: '#5c8fd6',
+    hotel: '#8e6bb8',
+    metro: '#e67e22',
+    salute: '#e74c3c',
+    turismo: '#27ae60',
+    tecnologia: '#3498db',
+    tempo: '#95a5a6',
+    social: '#f39c12',
   };
 
+  let mode = $state<Mode>('frasi');
   let query = $state('');
+  let translateInput = $state('');
   let onlyFav = $state(false);
   let big = $state<{ hanzi: string; it: string; pinyin?: string } | null>(null);
 
@@ -56,7 +77,7 @@
   );
 
   const grouped = $derived.by(() => {
-    const m = new Map<Frase['cat'], Frase[]>();
+    const m = new Map<FraseCat, Frase[]>();
     for (const f of filtered) {
       const arr = m.get(f.cat) ?? [];
       arr.push(f);
@@ -64,61 +85,132 @@
     }
     return [...m.entries()];
   });
+
+  const translateHits = $derived(
+    translateInput.trim() ? translateOffline(translateInput, frasi, lessico, 12) : [],
+  );
 </script>
 
-<PageHeader eyebrow="语 offline" title="Frasario" sub="Tocca una frase per mostrarla grande al tassista." />
+<PageHeader
+  eyebrow="语 offline"
+  title="Frasario"
+  sub={mode === 'frasi'
+    ? 'Tocca una frase per mostrarla grande al tassista.'
+    : 'Traduttore offline: cerca parole o frasi in italiano o hanzi.'}
+/>
 
-<div class="search-bar">
-  <input class="search" type="search" placeholder="Cerca frase, pinyin, hanzi…" bind:value={query} />
-  <button class="fav-filter" class:on={onlyFav} onclick={() => (onlyFav = !onlyFav)} aria-pressed={onlyFav}>★</button>
+<div class="mode-tabs" role="tablist" aria-label="Modalità frasario">
+  <button class="mode-tab" class:on={mode === 'frasi'} role="tab" aria-selected={mode === 'frasi'} onclick={() => (mode = 'frasi')}>
+    Frasi
+  </button>
+  <button
+    class="mode-tab"
+    class:on={mode === 'traduci'}
+    role="tab"
+    aria-selected={mode === 'traduci'}
+    onclick={() => (mode = 'traduci')}
+  >
+    Traduci <span class="offline-badge">offline</span>
+  </button>
 </div>
 
-{#if !query.trim() && !onlyFav && hotelsWithAddr.length}
-  <div class="block-head">
-    <h3 class="block-title">Indirizzi alloggi</h3>
-  </div>
-  <div class="list">
-    {#each hotelsWithAddr as a (a.id)}
-      <button class="frase card-interactive" onclick={() => (big = { hanzi: a.addressLocal!, it: a.name })}>
-        <div class="main">
-          <div class="it">{a.name}</div>
-          <div class="hanzi">{a.addressLocal}</div>
-        </div>
-      </button>
-    {/each}
-  </div>
-{/if}
-
-{#each grouped as [cat, list] (cat)}
-  <div class="block-head">
-    <h3 class="block-title">{catLabel[cat]}</h3>
-    <span class="cat-chip" style="--chip-fg: {catHue[cat]}">{list.length}</span>
-  </div>
-  <div class="list">
-    {#each list as f (f.hanzi)}
-      <div class="frase">
-        <button class="main card-interactive" onclick={() => (big = { hanzi: f.hanzi, it: f.it, pinyin: f.pinyin })}>
-          <div class="it">{f.it}{#if f.showBig}<span class="tag">★ tassista</span>{/if}{#if hasLocalAudio(f)}<span class="tag audio">🔊 offline</span>{/if}</div>
-          <div class="pinyin">{f.pinyin}</div>
-          <div class="hanzi">{f.hanzi}</div>
-        </button>
-        <div class="actions">
-          <button class="act" aria-label="Pronuncia" onclick={() => speak(f)}>🔊</button>
-          <button class="act fav" class:on={favIds.has(f.hanzi)} aria-label="Preferito" onclick={() => toggleFav(f)}>
-            {favIds.has(f.hanzi) ? '★' : '☆'}
-          </button>
-        </div>
+{#if mode === 'traduci'}
+  <div class="translate-panel">
+    <input
+      class="search translate-input"
+      type="search"
+      placeholder="Scrivi in italiano o incolla hanzi…"
+      bind:value={translateInput}
+      autocomplete="off"
+      autocorrect="off"
+    />
+    <p class="translate-hint">
+      Nessuna connessione richiesta — cerca tra {frasi.length} frasi e {lessico.length} parole del dizionario locale.
+    </p>
+    {#if translateInput.trim() && translateHits.length === 0}
+      <EmptyState icon="译" title="Nessuna corrispondenza" hint="Prova una parola più semplice, o cerca nel tab Frasi." />
+    {:else if translateHits.length}
+      <div class="list">
+        {#each translateHits as hit (hit.hanzi + hit.it)}
+          <div class="frase">
+            <button
+              class="main card-interactive"
+              onclick={() => (big = { hanzi: hit.hanzi, it: hit.it, pinyin: hit.pinyin })}
+            >
+              <div class="it">
+                {hit.it}
+                {#if hit.showBig}<span class="tag">★ tassista</span>{/if}
+                {#if hit.audio}<span class="tag audio">🔊 offline</span>{/if}
+                <span class="tag src">{hit.source === 'frase' ? 'frase' : 'parola'}</span>
+              </div>
+              <div class="pinyin">{hit.pinyin}</div>
+              <div class="hanzi">{hit.hanzi}</div>
+            </button>
+            <div class="actions">
+              <button class="act" aria-label="Pronuncia" onclick={() => speakHanzi(hit.hanzi, hit.audio)}>🔊</button>
+            </div>
+          </div>
+        {/each}
       </div>
-    {/each}
+    {/if}
   </div>
-{/each}
+{:else}
+  <div class="search-bar">
+    <input class="search" type="search" placeholder="Cerca frase, pinyin, hanzi…" bind:value={query} />
+    <button class="fav-filter" class:on={onlyFav} onclick={() => (onlyFav = !onlyFav)} aria-pressed={onlyFav}>★</button>
+  </div>
 
-{#if filtered.length === 0}
-  <EmptyState
-    icon={onlyFav ? '★' : '语'}
-    title={onlyFav ? 'Nessun preferito ancora' : 'Nessun risultato'}
-    hint={onlyFav ? 'Tocca ☆ su una frase per salvarla qui.' : 'Prova un altro termine di ricerca.'}
-  />
+  {#if !query.trim() && !onlyFav && hotelsWithAddr.length}
+    <div class="block-head">
+      <h3 class="block-title">Indirizzi alloggi</h3>
+    </div>
+    <div class="list">
+      {#each hotelsWithAddr as a (a.id)}
+        <button class="frase card-interactive" onclick={() => (big = { hanzi: a.addressLocal!, it: a.name })}>
+          <div class="main">
+            <div class="it">{a.name}</div>
+            <div class="hanzi">{a.addressLocal}</div>
+          </div>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
+  {#each grouped as [cat, list] (cat)}
+    <div class="block-head">
+      <h3 class="block-title">{catLabel[cat]}</h3>
+      <span class="cat-chip" style="--chip-fg: {catHue[cat]}">{list.length}</span>
+    </div>
+    <div class="list">
+      {#each list as f (f.hanzi)}
+        <div class="frase">
+          <button class="main card-interactive" onclick={() => (big = { hanzi: f.hanzi, it: f.it, pinyin: f.pinyin })}>
+            <div class="it">
+              {f.it}{#if f.showBig}<span class="tag">★ tassista</span>{/if}{#if hasLocalAudio(f)}<span class="tag audio"
+                  >🔊 offline</span
+                >{/if}
+            </div>
+            <div class="pinyin">{f.pinyin}</div>
+            <div class="hanzi">{f.hanzi}</div>
+          </button>
+          <div class="actions">
+            <button class="act" aria-label="Pronuncia" onclick={() => speak(f)}>🔊</button>
+            <button class="act fav" class:on={favIds.has(f.hanzi)} aria-label="Preferito" onclick={() => toggleFav(f)}>
+              {favIds.has(f.hanzi) ? '★' : '☆'}
+            </button>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/each}
+
+  {#if filtered.length === 0}
+    <EmptyState
+      icon={onlyFav ? '★' : '语'}
+      title={onlyFav ? 'Nessun preferito ancora' : 'Nessun risultato'}
+      hint={onlyFav ? 'Tocca ☆ su una frase per salvarla qui.' : 'Prova un altro termine di ricerca.'}
+    />
+  {/if}
 {/if}
 
 {#if big}
@@ -126,6 +218,48 @@
 {/if}
 
 <style>
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 4px;
+    background: var(--paper-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+  }
+  .mode-tab {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    color: var(--ink-faint);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .mode-tab.on {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .offline-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--jade-bright);
+    margin-left: 4px;
+    letter-spacing: 0.04em;
+  }
+  .translate-panel { margin-bottom: 8px; }
+  .translate-input { width: 100%; margin-bottom: 8px; }
+  .translate-hint {
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+    line-height: 1.45;
+  }
+  .tag.src { color: var(--ink-faint); }
   .search { flex: 1; padding: 12px 16px; }
   .fav-filter {
     width: 48px;
