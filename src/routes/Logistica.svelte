@@ -8,6 +8,8 @@
   import { liveQuery } from 'dexie';
   import type { Giorno, GiornoSchedule } from '../data/types';
   import { cityThemeByItalianName, cityCoverSrc } from '../lib/city-theme';
+  import { fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   import { daySwipe } from '../lib/day-swipe';
   import { haptic } from '../lib/haptic';
 
@@ -50,6 +52,7 @@
   let checkedActs = $state<Set<string>>(new Set());
   let swipeX = $state(0);
   let swiping = $state(false);
+  let slideDir = $state(1);
 
   // ripristina l'ultimo giorno visto
   $effect(() => {
@@ -103,6 +106,7 @@
   function goDay(delta: -1 | 1) {
     const n = clampDay(focus + delta);
     if (n === focus) return;
+    slideDir = delta;
     focus = n;
     haptic(10);
   }
@@ -116,8 +120,26 @@
 
   function pick(n: number) {
     const clamped = clampDay(n);
-    if (clamped !== focus) haptic(8);
+    if (clamped === focus) return;
+    slideDir = clamped > focus ? 1 : -1;
+    haptic(8);
     focus = clamped;
+  }
+
+  function releaseSwipe(commit: 'next' | 'prev' | null) {
+    if (commit) {
+      slideDir = commit === 'next' ? 1 : -1;
+      swiping = true;
+      swipeX = 0;
+      if (commit === 'next') next();
+      else prev();
+      requestAnimationFrame(() => {
+        swiping = false;
+      });
+      return;
+    }
+    swiping = false;
+    swipeX = 0;
   }
 
   // scroll chip attivo al centro
@@ -202,18 +224,13 @@
     class:swiping
     style="transform: translateX({swipeX}px)"
     use:daySwipe={{
-      onNext: next,
-      onPrev: prev,
       canNext: () => focus < 20,
       canPrev: () => focus > 1,
       onDrag: (dx) => {
         swiping = true;
         swipeX = dx;
       },
-      onDragEnd: () => {
-        swiping = false;
-        swipeX = 0;
-      },
+      onRelease: releaseSwipe,
     }}
   >
     <div class="swipe-hint" aria-hidden="true">
@@ -223,7 +240,12 @@
     </div>
 
     {#key focus}
-      <article class="day-sheet" style="--c:{meta.accent}">
+      <article
+        class="day-sheet"
+        style="--c:{meta.accent}"
+        in:fly={{ x: slideDir * 88, duration: 420, opacity: 0.96, easing: cubicOut }}
+        out:fly={{ x: slideDir * -88, duration: 300, opacity: 0.92, easing: cubicOut }}
+      >
       <div class="sheet-accent" aria-hidden="true"></div>
 
       <header class="sheet-head">
@@ -539,7 +561,7 @@
   .day-stage {
     position: relative;
     touch-action: pan-y;
-    transition: transform 0.22s var(--ease);
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform;
   }
   .day-stage.swiping {
@@ -799,11 +821,6 @@
       var(--shadow-lg),
       0 0 0 1px color-mix(in srgb, var(--c) 8%, transparent),
       0 28px 56px color-mix(in srgb, var(--c) 14%, transparent);
-    animation: sheetIn 0.38s var(--ease) both;
-  }
-  @keyframes sheetIn {
-    from { opacity: 0; transform: translateY(14px) scale(0.98); }
-    to { opacity: 1; transform: none; }
   }
   .sheet-accent {
     height: 4px;
