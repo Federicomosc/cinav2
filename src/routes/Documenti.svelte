@@ -32,6 +32,14 @@
     other: 'Altro',
   };
 
+  const KIND_ICON: Record<SecureDoc['kind'], string> = {
+    passport: '🛂',
+    visa: '📋',
+    insurance: '🏥',
+    ticket: '🎫',
+    other: '📄',
+  };
+
   /** Auto-spunta checklist quando carichi un documento del tipo corrispondente */
   const KIND_CHECKLIST: Partial<Record<SecureDoc['kind'], RegExp>> = {
     passport: /passaporto.*visto.*caricate/i,
@@ -59,9 +67,16 @@
   let busy = $state(false);
 
   let docs = $state<SecureDoc[]>([]);
+  const docsSorted = $derived([...docs].sort((a, b) => b.addedAt - a.addedAt));
   let title = $state('');
   let kind = $state<SecureDoc['kind']>('passport');
-  let preview = $state<{ url: string; mime: string; title: string } | null>(null);
+  let preview = $state<{
+    url: string;
+    mime: string;
+    title: string;
+    kind: SecureDoc['kind'];
+  } | null>(null);
+  let openingDocId = $state<string | null>(null);
   let deleteTarget = $state<SecureDoc | null>(null);
   let showResetConfirm = $state(false);
   let resetConfirmOpening = false;
@@ -191,6 +206,53 @@
     for (const k of kinds) await syncChecklistForKind(k);
   }
 
+  function formatDocDate(ts: number) {
+    return new Date(ts).toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function defaultDocTitle(file: File, docKind: SecureDoc['kind']) {
+    const custom = title.trim();
+    if (custom) return custom;
+    const when = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+    const base = KIND_LABEL[docKind];
+    if (/^IMG_|^PXL_|^photo|\.(jpg|jpeg|png|heic|pdf)$/i.test(file.name)) {
+      return `${base} · ${when}`;
+    }
+    return file.name;
+  }
+
+  function normalizeIv(iv: SecureDoc['iv']): Uint8Array {
+    if (iv instanceof Uint8Array) return iv;
+    return new Uint8Array(iv as ArrayLike<number>);
+  }
+
+  function normalizeCipher(cipher: SecureDoc['cipher']): ArrayBuffer {
+    if (cipher instanceof ArrayBuffer) return cipher;
+    const view = cipher as ArrayBufferView;
+    return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  }
+
+  function isGenericTitle(doc: SecureDoc) {
+    return /^IMG_|^PXL_|^photo|^document|^scan/i.test(doc.title) || /\.(jpg|jpeg|png|heic|pdf)$/i.test(doc.title);
+  }
+
+  function docDisplayTitle(doc: SecureDoc) {
+    if (isGenericTitle(doc)) return KIND_LABEL[doc.kind];
+    return doc.title;
+  }
+
+  function docDisplaySubtitle(doc: SecureDoc) {
+    const date = formatDocDate(doc.addedAt);
+    if (isGenericTitle(doc)) return date;
+    return `${KIND_LABEL[doc.kind]} · ${date}`;
+  }
+
   async function onFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file || !key || !vault) return;
@@ -200,7 +262,7 @@
       const docKind = kind;
       await db.documents.add({
         id: uid(),
-        title: title.trim() || file.name,
+        title: defaultDocTitle(file, docKind),
         kind: docKind,
         iv,
         salt: vault.salt,
@@ -218,11 +280,25 @@
   }
 
   async function openDoc(doc: SecureDoc) {
-    if (!key) return;
-    resetIdleLock();
-    const buf = await decryptBytes(key, doc.iv, doc.cipher);
-    const blob = new Blob([buf], { type: doc.mime });
-    preview = { url: URL.createObjectURL(blob), mime: doc.mime, title: doc.title };
+    if (!key || openingDocId) return;
+    openingDocId = doc.id;
+    err = '';
+    try {
+      resetIdleLock();
+      const buf = await decryptBytes(key, normalizeIv(doc.iv), normalizeCipher(doc.cipher));
+      const blob = new Blob([buf], { type: doc.mime || 'application/octet-stream' });
+      closePreview();
+      preview = {
+        url: URL.createObjectURL(blob),
+        mime: doc.mime || 'application/octet-stream',
+        title: docDisplayTitle(doc),
+        kind: doc.kind,
+      };
+    } catch {
+      err = 'Impossibile aprire il documento. Riprova o ricaricalo.';
+    } finally {
+      openingDocId = null;
+    }
   }
 
   function closePreview() {
@@ -378,8 +454,8 @@
           </div>
 
           <div class="add-form">
-            <label class="field-lbl" for="doc-title">Titolo</label>
-            <input id="doc-title" type="text" placeholder="es. Passaporto Fede" bind:value={title} />
+            <label class="field-lbl" for="doc-title">Titolo (opzionale)</label>
+            <input id="doc-title" type="text" placeholder="es. Passaporto Fede — se vuoto usa il tipo" bind:value={title} />
 
             <label class="field-lbl" for="doc-kind">Tipo</label>
             <select id="doc-kind" bind:value={kind}>
@@ -416,11 +492,24 @@
           {#if docs.length === 0}
             <p class="empty-docs">Nessun documento ancora. Scatta passaporto, visto o QR biglietti.</p>
           {:else}
+            <p class="doc-list-hint">Tocca <strong>Apri</strong> per vedere foto o PDF a schermo intero.</p>
             <ul class="doc-list">
-              {#each docs as d (d.id)}
+              {#each docsSorted as d (d.id)}
                 <li class="doc-row">
-                  <span class="doc-kind">{KIND_LABEL[d.kind]}</span>
-                  <button type="button" class="doc-open" onclick={() => openDoc(d)}>{d.title}</button>
+                  <span class="doc-icon" aria-hidden="true">{KIND_ICON[d.kind]}</span>
+                  <div class="doc-body">
+                    <span class="doc-kind-badge">{KIND_LABEL[d.kind]}</span>
+                    <span class="doc-title">{docDisplayTitle(d)}</span>
+                    <span class="doc-meta">{docDisplaySubtitle(d)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="doc-open-btn"
+                    disabled={busy || openingDocId === d.id}
+                    onclick={() => openDoc(d)}
+                  >
+                    {openingDocId === d.id ? '…' : 'Apri'}
+                  </button>
                   <button
                     type="button"
                     class="doc-del"
@@ -432,6 +521,10 @@
             </ul>
           {/if}
 
+          {#if err && vstate === 'unlocked'}
+            <p class="err doc-err">{err}</p>
+          {/if}
+
           <p class="vault-note">I file restano solo su questo telefono, cifrati. Blocco automatico dopo 3 min o in background.</p>
         </div>
       {/if}
@@ -440,15 +533,28 @@
 </div>
 
 {#if preview}
-  <button class="overlay" onclick={closePreview} aria-label="Chiudi anteprima">
-    {#if preview.mime.startsWith('image/')}
-      <img src={preview.url} alt={preview.title} />
-    {:else}
-      <p class="preview-title">{preview.title}</p>
-      <a class="preview-dl" href={preview.url} download={preview.title}>Scarica / apri</a>
-    {/if}
-    <span class="hint">tocca per chiudere</span>
-  </button>
+  <div class="preview-backdrop" use:portal role="presentation" onclick={(e) => e.target === e.currentTarget && closePreview()}>
+    <div class="preview-panel" role="dialog" aria-labelledby="preview-title" onclick={(e) => e.stopPropagation()}>
+      <header class="preview-head">
+        <div class="preview-head-text">
+          <span class="preview-kind">{KIND_ICON[preview.kind]} {KIND_LABEL[preview.kind]}</span>
+          <h3 id="preview-title" class="preview-title">{preview.title}</h3>
+        </div>
+        <button type="button" class="preview-close" onclick={closePreview}>Chiudi</button>
+      </header>
+      <div class="preview-body">
+        {#if preview.mime.startsWith('image/')}
+          <img src={preview.url} alt={preview.title} class="preview-img" />
+        {:else if preview.mime === 'application/pdf'}
+          <iframe src={preview.url} title={preview.title} class="preview-pdf"></iframe>
+          <a class="preview-dl" href={preview.url} target="_blank" rel="noopener noreferrer">Apri PDF a schermo intero</a>
+        {:else}
+          <p class="preview-fallback">Anteprima non disponibile per questo formato.</p>
+          <a class="preview-dl" href={preview.url} download={preview.title}>Scarica file</a>
+        {/if}
+      </div>
+    </div>
+  </div>
 {/if}
 
 {#if deleteTarget}
@@ -762,6 +868,14 @@
     border-radius: var(--radius-sm);
   }
 
+  .doc-list-hint {
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    margin-bottom: 10px;
+    line-height: 1.45;
+  }
+  .doc-list-hint strong { color: var(--ink-soft); font-weight: 600; }
+
   .doc-list {
     list-style: none;
     display: flex;
@@ -772,40 +886,74 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 12px 12px 12px 14px;
     background: linear-gradient(155deg, var(--paper-2) 0%, var(--surface) 100%);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
   }
-  .doc-kind {
+  .doc-icon {
     flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-size: 1.35rem;
+    background: var(--jade-soft);
+    border: 1px solid color-mix(in srgb, var(--jade) 28%, transparent);
+    border-radius: 10px;
+  }
+  .doc-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .doc-kind-badge {
     font-family: var(--mono);
     font-size: 8px;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--jade-bright);
-    background: var(--jade-soft);
-    border: 1px solid color-mix(in srgb, var(--jade) 28%, transparent);
-    border-radius: 4px;
-    padding: 4px 7px;
-    max-width: 72px;
-    text-align: center;
-    line-height: 1.2;
   }
-  .doc-open {
-    flex: 1;
-    min-width: 0;
-    text-align: left;
-    font-weight: 500;
-    font-size: 0.92rem;
+  .doc-title {
+    font-weight: 600;
+    font-size: 0.95rem;
     color: var(--ink);
-    white-space: nowrap;
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .doc-open:active { color: var(--cinabro-bright); }
+  .doc-meta {
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .doc-open-btn {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    min-height: 40px;
+    min-width: 52px;
+    box-shadow: 0 2px 10px rgba(63, 168, 122, 0.25);
+    touch-action: manipulation;
+  }
+  .doc-open-btn:disabled { opacity: 0.55; }
+  .doc-open-btn:active { transform: scale(0.97); }
+  .doc-err { margin-top: 12px; text-align: center; }
   .doc-del {
     flex: none;
     width: 32px;
@@ -828,23 +976,103 @@
     margin-top: 14px;
   }
 
-  .overlay {
+  .preview-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 100;
-    background: rgba(6, 5, 4, 0.96);
-    color: var(--ink);
+    z-index: 1100;
+    background: rgba(6, 5, 4, 0.92);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    padding-bottom: calc(16px + var(--safe-bottom));
+    animation: fadeIn 0.2s var(--ease) both;
+  }
+  .preview-panel {
+    width: 100%;
+    max-width: 440px;
+    max-height: calc(100dvh - 32px - var(--safe-bottom));
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 100%);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .preview-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    flex: none;
+  }
+  .preview-head-text { min-width: 0; }
+  .preview-kind {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--jade-bright);
+    margin-bottom: 4px;
+  }
+  .preview-title {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .preview-close {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    padding: 8px 14px;
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+  .preview-body {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 24px;
-    animation: fadeIn 0.25s var(--ease) both;
+    gap: 12px;
+    padding: 16px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .overlay img { max-width: 100%; max-height: 80vh; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); }
-  .preview-title { font-family: var(--serif); font-size: 1.1rem; }
+  .preview-img {
+    max-width: 100%;
+    max-height: min(70dvh, 560px);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    object-fit: contain;
+  }
+  .preview-pdf {
+    width: 100%;
+    height: min(65dvh, 520px);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: #fff;
+  }
+  .preview-fallback {
+    font-size: 0.9rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
   .preview-dl {
     font-family: var(--mono);
     font-size: 12px;
@@ -852,16 +1080,7 @@
     padding: 10px 16px;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
-  }
-  .hint {
-    position: absolute;
-    bottom: calc(24px + var(--safe-bottom));
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    opacity: 0.7;
+    text-align: center;
   }
 
   .confirm-backdrop {
@@ -874,6 +1093,7 @@
     padding: 24px;
     animation: fadeIn 0.2s var(--ease) both;
   }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .confirm-card {
     width: 100%;
     max-width: 340px;
