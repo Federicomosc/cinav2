@@ -4,6 +4,7 @@
   import PageHeader from '../components/PageHeader.svelte';
   import { db, uid, now, type ChecklistItem, type SecureDoc } from '../db/dexie';
   import { deriveKey, makeVerifier, checkVerifier, encryptBytes, decryptBytes, randomBytes } from '../lib/crypto';
+  import { portal } from '../lib/portal';
 
   interface Vault {
     salt: Uint8Array;
@@ -63,6 +64,7 @@
   let preview = $state<{ url: string; mime: string; title: string } | null>(null);
   let deleteTarget = $state<SecureDoc | null>(null);
   let showResetConfirm = $state(false);
+  let resetConfirmOpening = false;
 
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -235,6 +237,22 @@
     resetIdleLock();
   }
 
+  function openResetConfirm(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    resetConfirmOpening = true;
+    showResetConfirm = true;
+    setTimeout(() => {
+      resetConfirmOpening = false;
+    }, 400);
+  }
+
+  function closeResetConfirm(e: MouseEvent) {
+    if (resetConfirmOpening) return;
+    if (e.target !== e.currentTarget) return;
+    showResetConfirm = false;
+  }
+
   async function resetVault() {
     busy = true;
     try {
@@ -348,7 +366,7 @@
           {#if docs.length}
             <p class="vault-meta muted">{docs.length} documento{docs.length === 1 ? '' : 'i'} salvato{docs.length === 1 ? '' : 'i'}</p>
           {/if}
-          <button type="button" class="forgot-link" onclick={() => (showResetConfirm = true)}>
+          <button type="button" class="forgot-link" onclick={openResetConfirm}>
             Password dimenticata?
           </button>
         </div>
@@ -434,7 +452,7 @@
 {/if}
 
 {#if deleteTarget}
-  <div class="confirm-backdrop" role="presentation" onclick={() => (deleteTarget = null)}>
+  <div class="confirm-backdrop" role="presentation" use:portal onclick={(e) => e.target === e.currentTarget && (deleteTarget = null)}>
     <div
       class="confirm-card"
       role="alertdialog"
@@ -454,7 +472,7 @@
 {/if}
 
 {#if showResetConfirm}
-  <div class="confirm-backdrop" role="presentation" onclick={() => (showResetConfirm = false)}>
+  <div class="confirm-backdrop" role="presentation" use:portal onclick={closeResetConfirm}>
     <div
       class="confirm-card"
       role="alertdialog"
@@ -646,14 +664,17 @@
     display: block;
     width: 100%;
     margin-top: 16px;
-    padding: 0;
+    padding: 12px 8px;
+    min-height: 44px;
     border: none;
     background: none;
-    font-size: 0.82rem;
-    color: var(--muted);
+    font-size: 0.88rem;
+    color: var(--cinabro-bright);
     text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .forgot-link:hover { color: var(--ink); }
   .err { color: var(--cinabro-bright); font-size: 0.85rem; margin-top: 8px; }
@@ -846,7 +867,7 @@
   .confirm-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 110;
+    z-index: 1000;
     background: rgba(6, 5, 4, 0.75);
     display: grid;
     place-items: center;
