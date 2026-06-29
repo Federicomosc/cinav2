@@ -33,3 +33,8 @@
 [  537944ms] [WARNING] Another connection wants to delete database 'cina-tour-2026'. Closing db now to resume the delete request. @ http://localhost:5173/node_modules/.vite/deps/dexie.js?v=6bcffa91:5054
 [  538139ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
 [  538139ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
+[  723005ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
+[  853745ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
+[  854121ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
+[  856056ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0
+[  856694ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5173/#/documenti:0

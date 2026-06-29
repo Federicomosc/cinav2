@@ -88,7 +88,7 @@
     void loadVault();
 
     const onVis = () => {
-      if (document.visibilityState === 'hidden') lockVault();
+      if (document.visibilityState === 'hidden' && !preview) lockVault();
     };
     const onAct = () => resetIdleLock();
     document.addEventListener('visibilitychange', onVis);
@@ -119,15 +119,17 @@
   }
 
   function resetIdleLock() {
-    if (vstate !== 'unlocked') return;
     clearIdleLock();
-    idleTimer = setTimeout(() => lockVault(), LOCK_IDLE_MS);
+    if (vstate !== 'unlocked' || preview) return;
+    idleTimer = setTimeout(() => {
+      if (!preview) lockVault();
+    }, LOCK_IDLE_MS);
   }
 
   function lockVault() {
     clearIdleLock();
     key = null;
-    closePreview();
+    closePreview({ resumeIdle: false });
     if (vault) vstate = 'locked';
     pw = '';
     err = '';
@@ -287,13 +289,14 @@
       resetIdleLock();
       const buf = await decryptBytes(key, normalizeIv(doc.iv), normalizeCipher(doc.cipher));
       const blob = new Blob([buf], { type: doc.mime || 'application/octet-stream' });
-      closePreview();
+      closePreview({ resumeIdle: false });
       preview = {
         url: URL.createObjectURL(blob),
         mime: doc.mime || 'application/octet-stream',
         title: docDisplayTitle(doc),
         kind: doc.kind,
       };
+      clearIdleLock();
     } catch {
       err = 'Impossibile aprire il documento. Riprova o ricaricalo.';
     } finally {
@@ -301,9 +304,11 @@
     }
   }
 
-  function closePreview() {
+  function closePreview(opts: { resumeIdle?: boolean } = {}) {
+    const resumeIdle = opts.resumeIdle ?? true;
     if (preview) URL.revokeObjectURL(preview.url);
     preview = null;
+    if (resumeIdle && vstate === 'unlocked') resetIdleLock();
   }
 
   async function confirmDelete() {
