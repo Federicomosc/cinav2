@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// PWA offline-first: app shell + font mappa + tile locali (cina.pmtiles, routing pbf).
+// PWA offline-first: app shell + font UI (bundled) + glyph mappa + tile locali.
 export default defineConfig({
   plugins: [
     svelte(),
@@ -61,20 +61,6 @@ export default defineConfig({
             options: {
               cacheName: 'img',
               expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-stylesheets' },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
             },
           },
           // Fallback online se i tile locali non sono stati generati

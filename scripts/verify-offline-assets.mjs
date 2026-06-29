@@ -75,6 +75,30 @@ if (routingPbfs >= 100) {
   fail++;
 }
 
+const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+if (/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(indexHtml)) {
+  console.error('✗ Font UI — index.html usa ancora Google Fonts CDN');
+  fail++;
+} else if (!fs.existsSync(path.join(root, 'src/fonts.css'))) {
+  console.error('✗ Font UI — manca src/fonts.css');
+  fail++;
+} else {
+  const uiFonts = [
+    '@fontsource/figtree',
+    '@fontsource/cormorant-garamond',
+    '@fontsource/ibm-plex-mono',
+    '@fontsource/noto-serif-sc',
+  ];
+  const missing = uiFonts.filter((p) => !fs.existsSync(path.join(root, 'node_modules', p)));
+  if (missing.length) {
+    console.error(`✗ Font UI — pacchetti mancanti: ${missing.join(', ')}. Esegui: npm install`);
+    fail++;
+  } else {
+    console.log('✓ Font UI — self-hosted (@fontsource, nessun CDN)');
+    ok++;
+  }
+}
+
 console.log(`\n${ok} ok, ${fail} mancanti`);
 if (fail > 0) {
   console.log('\nPrepara tutto con: npm run offline:prepare');
