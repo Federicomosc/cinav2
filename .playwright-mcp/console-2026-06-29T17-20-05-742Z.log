@@ -85,3 +85,4 @@
     at HMRClient.queueUpdate (http://localhost:5173/@vite/client:200:33)
     at async Promise.all (index 0)
     at async handleMessage (http://localhost:5173/@vite/client:966:4)
+[ 3175952ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:992

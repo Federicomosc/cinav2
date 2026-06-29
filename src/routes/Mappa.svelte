@@ -48,8 +48,18 @@
   let itinPlan = $state<ItineraryPlan | null>(null);
   let itinLoading = $state(false);
   let itinError = $state('');
-  let itinExpanded = $state(false);
   let itinLegIdx = $state(0);
+  let itinSheetH = $state(100);
+  let mapWrapEl: HTMLDivElement | undefined;
+
+  const ITIN_H_MIN = 92;
+  const ITIN_H_COMPACT = 158;
+
+  let itinDragStartY = 0;
+  let itinDragStartH = 0;
+  let itinDragging = false;
+
+  const itinCompact = $derived(itinSheetH < ITIN_H_COMPACT);
 
   const navDestPoi = $derived(
     nav.seg === 'mappa' && nav.id && !nav.id.startsWith('itin:')
@@ -216,8 +226,8 @@
     itinPlan = null;
     itinError = '';
     itinLoading = false;
-    itinExpanded = false;
     itinLegIdx = 0;
+    itinSheetH = 100;
     itinAbort?.abort();
     itinAbort = null;
     clearItinHighlights();
@@ -275,9 +285,25 @@
     go('mappa');
   }
 
+  function maxItinSheetH(): number {
+    const wrapH = mapWrapEl?.clientHeight ?? window.innerHeight * 0.55;
+    return Math.round(Math.min(wrapH * 0.78, window.innerHeight * 0.58));
+  }
+
+  function clampItinSheetH(h: number): number {
+    return Math.round(Math.min(maxItinSheetH(), Math.max(ITIN_H_MIN, h)));
+  }
+
+  function setItinSheetH(h: number, refit = true) {
+    itinSheetH = clampItinSheetH(h);
+    if (refit && itinPlan?.coordinates.length) {
+      requestAnimationFrame(() => fitItinBounds(itinPlan!.coordinates));
+    }
+  }
+
   function fitItinBounds(coords: [number, number][]) {
     if (!map || coords.length < 1) return;
-    const bottom = itinExpanded ? 300 : 118;
+    const bottom = itinSheetH + 20;
     if (coords.length === 1) {
       map.flyTo({ center: coords[0], zoom: 14, duration: 800 });
       return;
@@ -301,11 +327,24 @@
     );
   }
 
-  function toggleItinExpanded() {
-    itinExpanded = !itinExpanded;
-    if (itinPlan?.coordinates.length) {
-      requestAnimationFrame(() => fitItinBounds(itinPlan!.coordinates));
-    }
+  function onItinDragStart(e: PointerEvent) {
+    itinDragging = true;
+    itinDragStartY = e.clientY;
+    itinDragStartH = itinSheetH;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onItinDragMove(e: PointerEvent) {
+    if (!itinDragging) return;
+    const dy = itinDragStartY - e.clientY;
+    itinSheetH = clampItinSheetH(itinDragStartH + dy);
+  }
+
+  function onItinDragEnd(e: PointerEvent) {
+    if (!itinDragging) return;
+    itinDragging = false;
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    if (itinPlan?.coordinates.length) fitItinBounds(itinPlan.coordinates);
   }
 
   function selectItinLeg(i: number) {
@@ -379,11 +418,20 @@
     else clearPoiFocus();
   });
 
+  let prevItinLoadId: string | undefined;
   $effect(() => {
     if (!mapReady || nav.seg !== 'mappa') return;
     const id = nav.id;
-    if (id?.startsWith('itin:')) void loadItineraryOnMap(id);
-    else clearItinRoute();
+    if (id?.startsWith('itin:')) {
+      if (id !== prevItinLoadId) {
+        itinSheetH = 100;
+        itinLegIdx = 0;
+        void loadItineraryOnMap(id);
+      }
+    } else {
+      clearItinRoute();
+    }
+    prevItinLoadId = id?.startsWith('itin:') ? id : undefined;
   });
 
   $effect(() => {
@@ -558,17 +606,33 @@
 </div>
 {/if}
 
-<div class="map-wrap" class:has-itin={!!activeItin}>
+<div class="map-wrap" class:has-itin={!!activeItin} bind:this={mapWrapEl}>
   <div class="map" class:hide-names={hideNames} class:itin-open={!!activeItin} class:route-focus={!!activeItin || !!navPlan} bind:this={mapEl}></div>
 
   {#if activeItin}
-    <aside class="itin-sheet" class:expanded={itinExpanded} aria-label="Itinerario {activeItin.title}">
-      <button type="button" class="itin-grab" onclick={toggleItinExpanded} aria-expanded={itinExpanded}>
+    <aside
+      class="itin-sheet"
+      class:dragging={itinDragging}
+      style="height: {itinSheetH}px"
+      aria-label="Itinerario {activeItin.title}"
+    >
+      <div
+        class="itin-grab"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-valuenow={itinSheetH}
+        aria-valuemin={ITIN_H_MIN}
+        aria-valuemax={maxItinSheetH()}
+        aria-label="Trascina per ridimensionare il pannello"
+        onpointerdown={onItinDragStart}
+        onpointermove={onItinDragMove}
+        onpointerup={onItinDragEnd}
+        onpointercancel={onItinDragEnd}
+      >
         <span class="itin-grab-bar" aria-hidden="true"></span>
-        <span class="sr-only">{itinExpanded ? 'Comprimi pannello' : 'Espandi pannello'}</span>
-      </button>
+      </div>
       <div class="itin-sheet-head">
-        <button type="button" class="itin-head-main" onclick={toggleItinExpanded}>
+        <div class="itin-head-main">
           <span class="nav-label">Itinerario</span>
           <strong class="itin-sheet-title">{activeItin.title}</strong>
           {#if itinPlan && itinPlan.distanceM > 0}
@@ -579,75 +643,82 @@
           {:else if itinLoading}
             <p class="nav-meta muted">Calcolo percorso…</p>
           {/if}
-        </button>
+        </div>
+        <div class="itin-size-btns" role="group" aria-label="Dimensione pannello">
+          <button type="button" class="size-btn" class:on={itinSheetH <= ITIN_H_MIN + 12} onclick={() => setItinSheetH(ITIN_H_MIN)} title="Minimo">S</button>
+          <button type="button" class="size-btn" class:on={itinSheetH > ITIN_H_MIN + 12 && itinSheetH < maxItinSheetH() - 40} onclick={() => setItinSheetH(220)} title="Medio">M</button>
+          <button type="button" class="size-btn" class:on={itinSheetH >= maxItinSheetH() - 40} onclick={() => setItinSheetH(maxItinSheetH())} title="Massimo">L</button>
+        </div>
         <button class="itin-close" onclick={closeItinerary} aria-label="Chiudi itinerario">×</button>
       </div>
 
-      {#if itinExpanded}
-        {#if itinPlan && itinPlan.legs.length > 1}
-          <div class="itin-legs" role="tablist" aria-label="Tratti">
-            {#each itinPlan.legs as _, i (i)}
-              <button
-                type="button"
-                class="itin-leg-tab"
-                class:on={itinLegIdx === i}
-                role="tab"
-                aria-selected={itinLegIdx === i}
-                onclick={() => selectItinLeg(i)}
-              >
-                {i + 1}→{i + 2}
-              </button>
+      <div class="itin-sheet-scroll">
+        {#if itinCompact}
+          <div class="itin-compact-stops" aria-hidden="true">
+            {#each activeItin.stops as p, i (p.id)}
+              <span class="itin-compact-dot" title={p.name}>{i + 1}</span>
+              {#if i < activeItin.stops.length - 1}<span class="itin-compact-line"></span>{/if}
             {/each}
           </div>
-        {/if}
+          <p class="itin-expand-hint">Trascina ↑ o tocca M / L per dettagli</p>
+        {:else}
+          {#if itinPlan && itinPlan.legs.length > 1}
+            <div class="itin-legs" role="tablist" aria-label="Tratti">
+              {#each itinPlan.legs as _, i (i)}
+                <button
+                  type="button"
+                  class="itin-leg-tab"
+                  class:on={itinLegIdx === i}
+                  role="tab"
+                  aria-selected={itinLegIdx === i}
+                  onclick={() => selectItinLeg(i)}
+                >
+                  {i + 1}→{i + 2}
+                </button>
+              {/each}
+            </div>
+          {/if}
 
-        {#if itinPlan?.legs[itinLegIdx]?.steps?.length}
-          <ol class="itin-directions" aria-label="Indicazioni stradali">
-            {#each itinPlan.legs[itinLegIdx].steps as step, i (i)}
-              <li class="itin-dir">
-                <span class="itin-dir-text">{step.instruction}</span>
-                {#if step.distanceM > 0}
-                  <span class="itin-dir-meta">{formatDistanceM(step.distanceM)}</span>
-                {/if}
+          {#if itinPlan?.legs[itinLegIdx]?.steps?.length}
+            <ol class="itin-directions" aria-label="Indicazioni stradali">
+              {#each itinPlan.legs[itinLegIdx].steps as step, i (i)}
+                <li class="itin-dir">
+                  <span class="itin-dir-text">{step.instruction}</span>
+                  {#if step.distanceM > 0}
+                    <span class="itin-dir-meta">{formatDistanceM(step.distanceM)}</span>
+                  {/if}
+                </li>
+              {/each}
+            </ol>
+          {:else if itinPlan && !itinLoading}
+            <p class="itin-dir-empty muted">Indicazioni dettagliate non disponibili per questo tratto.</p>
+          {/if}
+
+          <ol class="itin-stops">
+            {#each activeItin.stops as p, i (p.id)}
+              <li>
+                <button class="itin-stop" onclick={() => focusPoi(p.id)}>
+                  <span class="itin-stop-num">{i + 1}</span>
+                  <PoiPhoto id={p.id} category={p.category} name={p.name} variant="thumb" />
+                  <span class="itin-stop-body">
+                    <span class="itin-stop-name">{p.name}</span>
+                    <span class="itin-stop-cat" style="--c:{CAT_COLOR[p.category]}">{CAT_LABEL[p.category]}</span>
+                  </span>
+                  <span class="itin-stop-go" aria-hidden="true">›</span>
+                </button>
               </li>
             {/each}
           </ol>
-        {:else if itinPlan && !itinLoading}
-          <p class="itin-dir-empty muted">Indicazioni dettagliate non disponibili per questo tratto.</p>
         {/if}
 
-        <ol class="itin-stops">
-          {#each activeItin.stops as p, i (p.id)}
-            <li>
-              <button class="itin-stop" onclick={() => focusPoi(p.id)}>
-                <span class="itin-stop-num">{i + 1}</span>
-                <PoiPhoto id={p.id} category={p.category} name={p.name} variant="thumb" />
-                <span class="itin-stop-body">
-                  <span class="itin-stop-name">{p.name}</span>
-                  <span class="itin-stop-cat" style="--c:{CAT_COLOR[p.category]}">{CAT_LABEL[p.category]}</span>
-                </span>
-                <span class="itin-stop-go" aria-hidden="true">›</span>
-              </button>
-            </li>
-          {/each}
-        </ol>
-      {:else}
-        <div class="itin-compact-stops" aria-hidden="true">
-          {#each activeItin.stops as p, i (p.id)}
-            <span class="itin-compact-dot" title={p.name}>{i + 1}</span>
-            {#if i < activeItin.stops.length - 1}<span class="itin-compact-line"></span>{/if}
-          {/each}
-        </div>
-        <p class="itin-expand-hint">Tocca per tappe e indicazioni stradali</p>
-      {/if}
-
-      {#if itinWalkHint}
-        <p class="walk-hint-sheet">{itinWalkHint}</p>
-      {/if}
-      {#if itinError}<p class="nav-err">{itinError}</p>{/if}
-      {#if itinPlan?.fallback && !itinError && activeItin.stops.length > 1}
-        <p class="nav-hint">Alcuni tratti sono stime — serve connessione o tile routing locali.</p>
-      {/if}
+        {#if itinWalkHint && !itinCompact}
+          <p class="walk-hint-sheet">{itinWalkHint}</p>
+        {/if}
+        {#if itinError}<p class="nav-err">{itinError}</p>{/if}
+        {#if itinPlan?.fallback && !itinError && activeItin.stops.length > 1 && !itinCompact}
+          <p class="nav-hint">Alcuni tratti sono stime — serve connessione o tile routing locali.</p>
+        {/if}
+      </div>
     </aside>
   {:else if navDestPoi}
     <aside class="nav-sheet" aria-label="Navigazione verso {navDestPoi.name}">
@@ -828,35 +899,64 @@
     backdrop-filter: blur(16px);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
-    padding: 6px 12px 10px;
+    padding: 4px 12px 8px;
     box-shadow: var(--shadow-lg);
-    max-height: none;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
   }
-  .itin-sheet.expanded {
-    max-height: min(46dvh, 360px);
-    padding-bottom: 12px;
+  .itin-sheet.dragging {
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--cinabro);
   }
   .itin-grab {
     display: flex;
     justify-content: center;
+    align-items: center;
     width: 100%;
-    padding: 6px 0 4px;
-    border: none;
-    background: transparent;
+    padding: 10px 0 6px;
+    cursor: ns-resize;
+    touch-action: none;
+    flex: none;
   }
   .itin-grab-bar {
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
     background: var(--line-strong);
+  }
+  .itin-sheet.dragging .itin-grab-bar {
+    background: var(--cinabro);
+    width: 48px;
+  }
+  .itin-sheet-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .itin-size-btns {
+    display: flex;
+    gap: 4px;
+    flex: none;
+  }
+  .size-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-faint);
+  }
+  .size-btn.on {
+    background: var(--cinabro);
+    border-color: var(--cinabro);
+    color: #fff;
   }
   .itin-head-main {
     flex: 1;
     min-width: 0;
-    text-align: left;
-    background: transparent;
-    border: none;
-    padding: 0;
   }
   .itin-compact-stops {
     display: flex;
@@ -971,9 +1071,9 @@
   .itin-sheet-head {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex: none;
   }
   .itin-sheet-title {
     display: block;
