@@ -128,7 +128,7 @@
       Nessuna connessione richiesta — cerca tra {frasi.length} frasi e {lessico.length} parole del dizionario locale.
     </p>
     {#if translateInput.trim() && translateHits.length === 0}
-      <EmptyState icon="译" title="Nessuna corrispondenza" hint="Prova una parola più semplice, o cerca nel tab Frasi." />
+      <EmptyState hanzi="译" title="Nessuna corrispondenza" hint="Prova una parola più semplice, o cerca nel tab Frasi." />
     {:else if translateHits.length}
       <div class="list">
         {#each translateHits as hit (hit.hanzi + hit.it)}
@@ -139,7 +139,7 @@
             >
               <div class="it">
                 {hit.it}
-                {#if hit.showBig}<span class="tag">★ tassista</span>{/if}
+                {#if hit.showBig}<span class="tag taxi">★ tassista</span>{/if}
                 {#if hit.audio}<span class="tag audio">🔊 offline</span>{/if}
                 <span class="tag src">{hit.source === 'frase' ? 'frase' : 'parola'}</span>
               </div>
@@ -181,12 +181,12 @@
       <h3 class="block-title">{catLabel[cat]}</h3>
       <span class="cat-chip" style="--chip-fg: {catHue[cat]}">{list.length}</span>
     </div>
-    <div class="list">
+    <div class="list list-stagger" style="--cat: {catHue[cat]}">
       {#each list as f (f.hanzi)}
         <div class="frase">
           <button class="main card-interactive" onclick={() => (big = { hanzi: f.hanzi, it: f.it, pinyin: f.pinyin })}>
             <div class="it">
-              {f.it}{#if f.showBig}<span class="tag">★ tassista</span>{/if}{#if hasLocalAudio(f)}<span class="tag audio"
+              {f.it}{#if f.showBig}<span class="tag taxi">★ tassista</span>{/if}{#if hasLocalAudio(f)}<span class="tag audio"
                   >🔊 offline</span
                 >{/if}
             </div>
@@ -206,7 +206,7 @@
 
   {#if filtered.length === 0}
     <EmptyState
-      icon={onlyFav ? '★' : '语'}
+      hanzi={onlyFav ? '★' : '语'}
       title={onlyFav ? 'Nessun preferito ancora' : 'Nessun risultato'}
       hint={onlyFav ? 'Tocca ☆ su una frase per salvarla qui.' : 'Prova un altro termine di ricerca.'}
     />
@@ -218,31 +218,6 @@
 {/if}
 
 <style>
-  .mode-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding: 4px;
-    background: var(--paper-2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line);
-  }
-  .mode-tab {
-    flex: 1;
-    padding: 10px 12px;
-    border: none;
-    border-radius: calc(var(--radius-sm) - 2px);
-    background: transparent;
-    color: var(--ink-faint);
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-  }
-  .mode-tab.on {
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--shadow-sm);
-  }
   .offline-badge {
     font-family: var(--mono);
     font-size: 9px;
@@ -274,23 +249,55 @@
   .fav-filter.on { background: var(--gold); color: #fff; border-color: var(--gold); box-shadow: 0 4px 12px var(--gold-soft); }
   .list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
   .frase {
+    position: relative;
     display: flex;
     align-items: stretch;
     gap: 0;
     background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
   }
-  .main { flex: 1; text-align: left; padding: 14px 16px; background: none; border: none; color: inherit; }
+  .frase::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--cat, var(--jade-bright)), color-mix(in srgb, var(--cat, var(--jade)) 40%, transparent));
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    pointer-events: none;
+  }
+  .main { flex: 1; text-align: left; padding: 14px 16px 14px 18px; background: none; border: none; color: inherit; }
   .it { font-weight: 600; color: var(--ink); font-size: 0.95rem; }
   .tag { font-family: var(--mono); font-size: 9px; color: var(--gold); margin-left: 8px; letter-spacing: 0.04em; }
+  .tag.taxi {
+    color: var(--gold);
+    background: var(--gold-soft);
+    border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+    border-radius: var(--radius-pill);
+    padding: 2px 8px;
+    font-weight: 700;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 25%, transparent);
+  }
   .tag.audio { color: var(--jade-bright); }
   .pinyin { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-faint); margin: 3px 0; letter-spacing: 0.02em; }
-  .hanzi { font-family: var(--hanzi); font-size: 1.75rem; color: var(--ink); line-height: 1.3; }
-  .actions { display: flex; flex-direction: column; border-left: 1px solid var(--line); }
-  .act { flex: 1; width: 50px; font-size: 17px; color: var(--ink-faint); transition: color 0.15s, background 0.15s; }
+  .hanzi {
+    font-family: var(--hanzi);
+    font-size: 1.85rem;
+    color: var(--ink);
+    line-height: 1.25;
+    text-shadow: 0 0 20px color-mix(in srgb, var(--cat, var(--jade)) 12%, transparent);
+  }
+  .actions {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper-2) 50%, transparent);
+  }
+  .act { flex: 1; width: 52px; font-size: 17px; color: var(--ink-faint); transition: color 0.15s, background 0.15s; }
   .act:active { background: var(--paper-2); }
   .act + .act { border-top: 1px solid var(--line); }
   .act.fav.on { color: var(--gold); }

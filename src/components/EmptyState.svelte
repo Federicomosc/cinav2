@@ -3,15 +3,22 @@
 
   interface Props {
     icon?: string;
+    hanzi?: string;
     title: string;
     hint?: string;
     children?: Snippet;
   }
-  let { icon = '○', title, hint, children }: Props = $props();
+  let { icon = '○', hanzi, title, hint, children }: Props = $props();
 </script>
 
 <div class="empty-state card">
-  <span class="empty-icon" aria-hidden="true">{icon}</span>
+  {#if hanzi}
+    <span class="empty-seal" aria-hidden="true">{hanzi}</span>
+  {:else}
+    <div class="empty-icon-wrap">
+      <span class="empty-icon" aria-hidden="true">{icon}</span>
+    </div>
+  {/if}
   <p class="empty-title">{title}</p>
   {#if hint}<p class="empty-hint">{hint}</p>{/if}
   {#if children}

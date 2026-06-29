@@ -49,9 +49,10 @@
   <h2 class="block-title">Emergenze cinesi</h2>
   <span class="block-sub">🇨🇳</span>
 </div>
-<div class="grid">
+<div class="grid list-stagger">
   {#each emergenze.cinesi as e (e.number)}
     <a class="num card card-interactive" href={`tel:${e.number}`}>
+      <span class="num-ring" aria-hidden="true"></span>
       <span class="n">{e.number}</span>
       <span class="l">{e.label}</span>
       {#if EMG_ZH[e.label]}<span class="zh">{EMG_ZH[e.label]}</span>{/if}
@@ -63,9 +64,9 @@
   <h2 class="block-title">Rete consolare italiana</h2>
   <span class="block-sub">🇮🇹</span>
 </div>
-<div class="list">
+<div class="list list-stagger">
   {#each emergenze.consolari as c (c.name + c.city)}
-    <article class="card cons">
+    <article class="card cons accent-card" style="--accent: var(--gold)">
       <div class="ctop"><b>{c.name}</b><span class="city">{c.city}</span></div>
       {#if c.address}<p class="addr">{c.address}</p>{/if}
       {#if c.addressLocal}<p class="addr-cn">{c.addressLocal}</p>{/if}
@@ -118,25 +119,50 @@
 
 <style>
   .hint { font-size: 0.82rem; margin: -6px 0 10px; }
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 8px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
   .num {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
     text-decoration: none;
     color: var(--ink);
-    padding: 20px 10px;
-    min-height: 120px;
+    padding: 22px 12px;
+    min-height: 128px;
+    border-color: color-mix(in srgb, var(--cinabro) 32%, var(--line-strong));
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--cinabro) 6%, var(--surface-hi)) 0%,
+      var(--surface) 100%
+    );
+    overflow: hidden;
+  }
+  .num-ring {
+    position: absolute;
+    inset: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--cinabro) 18%, transparent);
+    pointer-events: none;
+  }
+  .num:active {
+    border-color: color-mix(in srgb, var(--cinabro) 55%, var(--line-strong));
+    box-shadow: var(--shadow-md), 0 0 28px var(--cinabro-glow);
   }
   .num .n {
+    position: relative;
     font-family: var(--serif);
-    font-size: 2.6rem;
+    font-size: 2.75rem;
     font-weight: 700;
-    color: var(--cinabro);
+    color: var(--cinabro-bright);
     line-height: 1;
-    text-shadow: 0 0 30px var(--cinabro-glow);
+    text-shadow: 0 0 32px var(--cinabro-glow);
   }
   .num .l {
     font-family: var(--mono);
@@ -153,7 +179,14 @@
     margin-top: 2px;
   }
   .list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
-  .cons { border-color: color-mix(in srgb, var(--gold) 22%, var(--line-strong)); }
+  .cons {
+    border-color: color-mix(in srgb, var(--gold) 28%, var(--line-strong));
+    padding-left: 22px;
+  }
+  .med {
+    border-color: color-mix(in srgb, var(--jade) 22%, var(--line-strong));
+    background: linear-gradient(165deg, color-mix(in srgb, var(--jade) 4%, var(--surface-hi)) 0%, var(--surface) 100%);
+  }
   .ctop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .city { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.04em; }
   .addr { font-size: 0.88rem; margin: 8px 0 0; color: var(--ink-soft); }

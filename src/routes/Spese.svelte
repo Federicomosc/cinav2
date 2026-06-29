@@ -82,7 +82,17 @@
 
 <PageHeader eyebrow="¥ utility da campo" title="Spese & Valuta" sub="Converti al volo e tieni il saldo del gruppo." />
 
-<section class="card conv accent-card">
+{#if total > 0}
+  <div class="stat-hero" style="--stat-accent: var(--gold)">
+    <div>
+      <span class="stat-hero-lbl">Speso finora</span>
+      <div class="stat-hero-val">{cny(total)}</div>
+    </div>
+    <span class="stat-meta">{expenses.length} movimenti</span>
+  </div>
+{/if}
+
+<section class="card conv accent-card" style="--accent: var(--gold)">
   <div class="block-head conv-head">
     <h2 class="block-title">Convertitore</h2>
     <span class="block-sub">1€ ≈ {rate} ¥</span>
@@ -173,7 +183,7 @@
   </section>
 {/if}
 
-<div class="list">
+<div class="list list-stagger">
   {#each expenses as e (e.id)}
     <div class="exp card-interactive">
       <div class="ex-main">
@@ -189,15 +199,40 @@
 
 <style>
   .small { font-size: 0.82rem; }
-  .conv { margin-bottom: 14px; }
-  .conv-head { margin-bottom: 4px; }
-  .accent-card {
-    border-color: color-mix(in srgb, var(--gold) 28%, var(--line-strong));
-    background: linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 100%);
+  .stat-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    align-self: flex-end;
+    padding-bottom: 4px;
   }
+  .conv { margin-bottom: 14px; border-color: color-mix(in srgb, var(--gold) 28%, var(--line-strong)); }
+  .conv-head { margin-bottom: 4px; }
   .conv-row { display: flex; align-items: flex-end; gap: 12px; margin-top: 10px; }
   .conv-row label { flex: 1; display: flex; flex-direction: column; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.04em; }
-  .eq { font-family: var(--mono); font-size: 1.2rem; padding-bottom: 10px; color: var(--gold); }
+  .conv-row input {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 12px 14px;
+  }
+  .eq {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 1rem;
+    padding-bottom: 0;
+    margin-bottom: 2px;
+    color: var(--gold);
+    background: var(--gold-soft);
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  }
   input, select { width: 100%; padding: 11px 14px; }
   section.card { margin-bottom: 14px; }
   .bal-list { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
@@ -235,15 +270,30 @@
   .exp {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    padding: 14px 14px 14px 16px;
     box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .exp::before {
+    content: '¥';
+    position: absolute;
+    right: 52px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--serif);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--gold) 8%, transparent);
+    pointer-events: none;
+    line-height: 1;
   }
   .ex-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .amt { font-family: var(--mono); font-weight: 600; font-size: 0.95rem; flex: none; }
+  .amt { font-family: var(--mono); font-weight: 700; font-size: 1rem; flex: none; color: var(--gold); }
   .icon-btn { color: var(--ink-faint); font-size: 14px; padding: 8px; min-width: 36px; min-height: 36px; opacity: 0.7; flex: none; }
   .icon-btn.del { opacity: 0.5; }
   .save { margin-top: 4px; }

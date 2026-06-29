@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { Map as MlMap, Marker as MlMarker } from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
-  import { pois, poiById, citta, itinerario, transports } from '../lib/content';
+  import { pois, poiById, citta, cittaById, itinerario, transports } from '../lib/content';
   import { computeOggi } from '../lib/today';
   import { go, nav } from '../lib/router.svelte';
   import {
@@ -15,12 +15,21 @@
     type NavPlan,
     type ItineraryPlan,
   } from '../lib/routing';
+  import {
+    computeNavProgress,
+    formatNavSummary,
+    isOffRoute,
+    sliceRouteAt,
+    type NavProgress,
+  } from '../lib/nav-guidance';
+  import { haptic } from '../lib/haptic';
+  import { waitForPosition } from '../lib/gps';
+  import { speakNavInstruction, resetNavSpeech } from '../lib/nav-speak';
   import { resolveItineraryFromMapId } from '../lib/itinerary';
   import { longWalkSummary } from '../lib/walk-hints';
   import { CAT_COLOR, CAT_ICON, CAT_LABEL } from '../lib/poi';
   import { offlineMapStyle } from '../lib/mapStyle';
   import { online } from '../lib/online.svelte';
-  import PageHeader from '../components/PageHeader.svelte';
   import PoiPhoto from '../components/PoiPhoto.svelte';
   import { cityTheme } from '../lib/city-theme';
   import { metroForCity, metroGeoJSON, type MetroStation } from '../lib/metro';
@@ -37,6 +46,7 @@
   let mapEl: HTMLDivElement;
   let map: MlMap | null = null;
   let userMarker: MlMarker | null = null;
+  let MarkerCtor: typeof import('maplibre-gl').Marker | null = null;
   let watchId: number | null = null;
 
   let tilesAvailable = $state(false);
@@ -44,6 +54,7 @@
   let geoNote = $state('');
   type MapLayer = 'poi' | 'metro' | 'route';
   let mapLayer = $state<MapLayer>('poi');
+  let poiQuery = $state('');
   let metroLineFilter = $state<string>('all');
   let metroQuery = $state('');
   type MetroSheetTab = 'route' | 'list';
@@ -60,6 +71,13 @@
   let navPlan = $state<NavPlan | null>(null);
   let navLoading = $state(false);
   let navError = $state('');
+  let navigating = $state(false);
+  let navProgress = $state<NavProgress | null>(null);
+  let lastNavStepIdx = $state(-1);
+  let rerouteBusy = $state(false);
+  let lastRerouteMs = 0;
+  let navVoice = $state(true);
+  let wakeLock: WakeLockSentinel | null = null;
   let navAbort: AbortController | null = null;
   let itinAbort: AbortController | null = null;
   let itinPlan = $state<ItineraryPlan | null>(null);
@@ -68,6 +86,7 @@
   let itinLegIdx = $state(0);
   let itinSheetH = $state(100);
   let mapWrapEl: HTMLDivElement | undefined;
+  let mapFullscreen = $state(false);
 
   const ITIN_H_MIN = 92;
   const ITIN_H_COMPACT = 158;
@@ -121,6 +140,36 @@
   });
 
   const activeCityMeta = $derived(citta.find((c) => c.id === activeCity));
+  const mapAccent = $derived(cityTheme(activeCity).accent);
+
+  const poiSearchHits = $derived.by(() => {
+    const q = poiQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const inCity = pois.filter((p) => p.city === activeCity);
+    const rest = pois.filter((p) => p.city !== activeCity);
+    const pool = [...inCity, ...rest];
+    const out: typeof pois = [];
+    const seen = new Set<string>();
+    for (const p of pool) {
+      if (seen.has(p.id)) continue;
+      const hay = `${p.name} ${p.blurb ?? ''} ${p.nameLocal ?? ''} ${CAT_LABEL[p.category]}`.toLowerCase();
+      if (hay.includes(q)) {
+        seen.add(p.id);
+        out.push(p);
+        if (out.length >= 8) break;
+      }
+    }
+    return out;
+  });
+
+  function pickPoiSearch(poiId: string) {
+    const p = poiById.get(poiId);
+    if (!p) return;
+    poiQuery = '';
+    activeCity = p.city;
+    setMapLayer('poi');
+    go('mappa', poiId);
+  }
 
   const routeFromPicks = $derived(
     pickField === 'from' ? filterMetroStations(metroData.stations, routeFromQ) : [],
@@ -168,15 +217,7 @@
   }
 
   // auto-navigazione quando arrivi da «Come arrivare» nel dettaglio POI
-  $effect(() => {
-    if (!mapReady || !navDestPoi) return;
-    try {
-      if (sessionStorage.getItem(AUTO_NAV_KEY) === navDestPoi.id) {
-        sessionStorage.removeItem(AUTO_NAV_KEY);
-        void startNavigation();
-      }
-    } catch { /* ignore */ }
-  });
+  let pendingAutoNav = false;
 
   function getUserLngLat(): [number, number] | null {
     if (userLngLat) return userLngLat;
@@ -184,44 +225,112 @@
     return ll ? [ll.lng, ll.lat] : null;
   }
 
-  function drawNavRoute(coords: [number, number][]) {
-    if (!map) return;
-    const data = {
+  function lineFeature(coords: [number, number][]) {
+    return {
       type: 'Feature' as const,
       properties: {},
       geometry: { type: 'LineString' as const, coordinates: coords },
     };
-    const src = map.getSource('nav-route');
-    if (src && 'setData' in src) {
-      (src as { setData: (d: unknown) => void }).setData(data);
-      return;
-    }
-    map.addSource('nav-route', { type: 'geojson', data });
+  }
+
+  function ensureNavRouteLayers() {
+    if (!map || map.getSource('nav-route-remaining')) return;
+    map.addSource('nav-route-done', {
+      type: 'geojson',
+      data: lineFeature([]),
+    });
+    map.addSource('nav-route-remaining', {
+      type: 'geojson',
+      data: lineFeature([]),
+    });
+    map.addLayer({
+      id: 'nav-route-done-line',
+      type: 'line',
+      source: 'nav-route-done',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#6a7a72', 'line-width': 5, 'line-opacity': 0.55 },
+    });
     map.addLayer({
       id: 'nav-route-outline',
       type: 'line',
-      source: 'nav-route',
+      source: 'nav-route-remaining',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#0a0f0c', 'line-width': 7, 'line-opacity': 0.35 },
     });
     map.addLayer({
       id: 'nav-route-line',
       type: 'line',
-      source: 'nav-route',
+      source: 'nav-route-remaining',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#3d9a6a', 'line-width': 5, 'line-opacity': 0.95 },
     });
   }
 
+  function updateNavRouteDisplay(coords: [number, number][], traversedM: number) {
+    if (!map) return;
+    ensureNavRouteLayers();
+    const { done, remaining } = sliceRouteAt(coords, traversedM);
+    const doneSrc = map.getSource('nav-route-done');
+    const remSrc = map.getSource('nav-route-remaining');
+    if (doneSrc && 'setData' in doneSrc) {
+      (doneSrc as { setData: (d: unknown) => void }).setData(lineFeature(done));
+    }
+    if (remSrc && 'setData' in remSrc) {
+      (remSrc as { setData: (d: unknown) => void }).setData(lineFeature(remaining));
+    }
+  }
+
+  function drawNavRoute(coords: [number, number][]) {
+    updateNavRouteDisplay(coords, 0);
+  }
+
+  async function acquireWakeLock() {
+    try {
+      wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function releaseWakeLock() {
+    void wakeLock?.release();
+    wakeLock = null;
+  }
+
+  function stopNavigation() {
+    navigating = false;
+    navProgress = null;
+    lastNavStepIdx = -1;
+    resetNavSpeech();
+    releaseWakeLock();
+    map?.easeTo({ pitch: 0, bearing: 0, duration: 450, padding: 0 });
+    userMarker?.getElement()?.classList.remove('nav-active');
+  }
+
   function clearNavRoute() {
+    stopNavigation();
     navPlan = null;
     navError = '';
+    navLoading = false;
     navAbort?.abort();
     navAbort = null;
     if (!map) return;
-    if (map.getLayer('nav-route-line')) map.removeLayer('nav-route-line');
-    if (map.getLayer('nav-route-outline')) map.removeLayer('nav-route-outline');
-    if (map.getSource('nav-route')) map.removeSource('nav-route');
+    for (const id of ['nav-route-line', 'nav-route-outline', 'nav-route-done-line']) {
+      if (map.getLayer(id)) map.removeLayer(id);
+    }
+    for (const id of ['nav-route-remaining', 'nav-route-done']) {
+      if (map.getSource(id)) map.removeSource(id);
+    }
+  }
+
+  /** Chiude pannello navigazione e torna alla mappa libera. */
+  function closeNavSheet() {
+    poiQuery = '';
+    if (nav.seg === 'mappa' && nav.id && !nav.id.startsWith('itin:')) {
+      go('mappa');
+    }
+    clearPoiFocus();
+    clearNavRoute();
   }
 
   function clearItinHighlights() {
@@ -440,16 +549,123 @@
     );
   }
 
-  async function startNavigation() {
-    const poi = navDestPoi;
-    if (!poi || !map) return;
-    const from = getUserLngLat();
-    if (!from) {
-      navError = 'Attiva il GPS per partire dalla tua posizione.';
+  function followNavCamera(lng: number, lat: number, heading: number | null, bearing: number, instant = false) {
+    if (!map) return;
+    const bear =
+      heading != null && !Number.isNaN(heading) && heading >= 0 ? heading : bearing;
+    map.easeTo({
+      center: [lng, lat],
+      zoom: 17.5,
+      bearing: bear,
+      pitch: 52,
+      duration: instant ? 0 : 750,
+      essential: true,
+      padding: { top: 168, bottom: 72, left: 28, right: 28 },
+    });
+  }
+
+  function onNavGpsUpdate(lng: number, lat: number, heading: number | null) {
+    if (!navigating || !navPlan || !navDestPoi) return;
+    const prog = computeNavProgress(
+      navPlan.coordinates,
+      navPlan.steps,
+      [lng, lat],
+      [navDestPoi.lng, navDestPoi.lat],
+    );
+    navProgress = prog;
+    updateNavRouteDisplay(navPlan.coordinates, prog.traversedM);
+
+    if (prog.arrived) {
+      if (lastNavStepIdx !== 999) {
+        haptic(24);
+        if (navVoice) speakNavInstruction('Sei arrivato');
+        lastNavStepIdx = 999;
+      }
       return;
     }
+
+    const instr = navPlan.steps?.[prog.stepIndex]?.instruction;
+    if (prog.stepIndex !== lastNavStepIdx && lastNavStepIdx >= 0 && instr && navVoice) {
+      speakNavInstruction(instr);
+    }
+    if (prog.stepIndex !== lastNavStepIdx && lastNavStepIdx >= 0) {
+      haptic(10);
+    }
+    lastNavStepIdx = prog.stepIndex;
+
+    followNavCamera(lng, lat, heading, prog.mapBearing);
+
+    if (isOffRoute(prog.offRouteM) && !rerouteBusy && Date.now() - lastRerouteMs > 10_000) {
+      void rerouteNavigation();
+    }
+  }
+
+  async function rerouteNavigation() {
+    const poi = navDestPoi;
+    const from = getUserLngLat();
+    if (!poi || !from || rerouteBusy) return;
+    rerouteBusy = true;
+    lastRerouteMs = Date.now();
+    try {
+      navAbort?.abort();
+      navAbort = new AbortController();
+      const plan = await planPedestrianRoute(from, [poi.lng, poi.lat], navAbort.signal);
+      navPlan = plan;
+      drawNavRoute(plan.coordinates);
+      lastNavStepIdx = -1;
+    } catch {
+      /* ignore */
+    } finally {
+      rerouteBusy = false;
+    }
+  }
+
+  function beginNavigation() {
+    if (!navPlan || !navDestPoi) return;
+    if (!getUserLngLat()) {
+      navError = 'Attiva il GPS per navigare.';
+      return;
+    }
+    navError = '';
+    navigating = true;
+    lastNavStepIdx = -1;
+    resetNavSpeech();
+    haptic(12);
+    void acquireWakeLock();
+    userMarker?.getElement()?.classList.add('nav-active');
+    const ll = getUserLngLat()!;
+    onNavGpsUpdate(ll[0], ll[1], null);
+    followNavCamera(ll[0], ll[1], null, navProgress?.mapBearing ?? 0, true);
+    if (navVoice && navPlan.steps?.[0]?.instruction) {
+      speakNavInstruction(navPlan.steps[0].instruction);
+    }
+  }
+
+  async function ensureUserPosition(): Promise<[number, number] | null> {
+    const cur = getUserLngLat();
+    if (cur) return cur;
+    const p = await waitForPosition();
+    if (!p) return null;
+    userLngLat = [p.lng, p.lat];
+    if (map && MarkerCtor && !userMarker) {
+      const el = document.createElement('div');
+      el.className = 'user-dot';
+      userMarker = new MarkerCtor({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
+    }
+    return [p.lng, p.lat];
+  }
+
+  async function startNavigation(autoStart = false) {
+    const poi = navDestPoi;
+    if (!poi || !map) return;
     navLoading = true;
     navError = '';
+    const from = await ensureUserPosition();
+    if (!from) {
+      navError = 'Impossibile ottenere il GPS. Attiva la posizione e riprova all’aperto.';
+      navLoading = false;
+      return;
+    }
     navAbort?.abort();
     navAbort = new AbortController();
     try {
@@ -460,7 +676,8 @@
       );
       navPlan = plan;
       drawNavRoute(plan.coordinates);
-      fitNavBounds(plan.coordinates);
+      if (autoStart) beginNavigation();
+      else fitNavBounds(plan.coordinates);
     } catch (e) {
       if (!(e instanceof DOMException && e.name === 'AbortError')) {
         navError = 'Percorso non disponibile. Riprova con connessione o zoom sulla zona.';
@@ -469,7 +686,6 @@
       navLoading = false;
     }
   }
-  // quando arrivi da un POI (#/mappa/poi-id) centra il marker
   let prevMapId: string | undefined;
   $effect(() => {
     if (!mapReady || nav.seg !== 'mappa') return;
@@ -480,8 +696,19 @@
     }
     prevMapId = id;
     if (id?.startsWith('itin:')) return;
-    if (id && poiById.has(id)) focusPoi(id);
-    else clearPoiFocus();
+    if (id && poiById.has(id)) {
+      try {
+        if (sessionStorage.getItem(AUTO_NAV_KEY) === id) {
+          sessionStorage.removeItem(AUTO_NAV_KEY);
+          pendingAutoNav = true;
+        }
+      } catch { /* ignore */ }
+      focusPoi(id);
+      if (!navPlan && !navLoading && !navigating) {
+        void startNavigation(pendingAutoNav);
+        pendingAutoNav = false;
+      }
+    } else clearPoiFocus();
   });
 
   let prevItinLoadId: string | undefined;
@@ -523,7 +750,13 @@
   onMount(() => {
     let cleanupFns: (() => void)[] = [];
     void init().then((fn) => fn && cleanupFns.push(fn));
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') exitMapFullscreen();
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
+      window.removeEventListener('keydown', onKey);
+      syncMapFsChrome(false);
       cleanupFns.forEach((f) => f());
     };
   });
@@ -544,6 +777,7 @@
     routingOffline = await hasLocalRoutingTiles();
 
     const ml = await import('maplibre-gl');
+    MarkerCtor = ml.Marker;
 
     if (tilesAvailable) {
       const { Protocol } = await import('pmtiles');
@@ -568,6 +802,9 @@
       ensureMetroTripLayers();
       mapReady = true;
     });
+    map.on('click', () => {
+      if (mapLayer !== 'metro' && !navigating) clearPoiFocus();
+    });
     map.on('zoom', () => (hideNames = (map?.getZoom() ?? 11) < 8.5));
 
     // marker dei POI: badge con icona-categoria ("immaginina") + nome + colore
@@ -584,7 +821,10 @@
       label.textContent = p.name;
       el.append(badge, label);
       el.title = p.name;
-      el.addEventListener('click', () => go('poi', p.id));
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        go('mappa', p.id);
+      });
       new ml.Marker({ element: el, anchor: 'center' }).setLngLat([p.lng, p.lat]).addTo(map);
     }
 
@@ -593,6 +833,7 @@
     return () => {
       navAbort?.abort();
       itinAbort?.abort();
+      releaseWakeLock();
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
       map?.remove();
     };
@@ -625,7 +866,7 @@
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
         geoNote = '';
-        const { longitude, latitude } = pos.coords;
+        const { longitude, latitude, heading } = pos.coords;
         userLngLat = [longitude, latitude];
         if (!map) return;
         if (!userMarker) {
@@ -635,9 +876,10 @@
         } else {
           userMarker.setLngLat([longitude, latitude]);
         }
+        if (navigating) onNavGpsUpdate(longitude, latitude, heading);
       },
       () => (geoNote = 'Posizione non disponibile (permesso negato o offline).'),
-      { enableHighAccuracy: true, maximumAge: 5000 },
+      { enableHighAccuracy: true, maximumAge: navigating ? 1000 : 5000 },
     );
   }
 
@@ -651,7 +893,13 @@
   }
 
   function recenter() {
-    if (userMarker && map) map.flyTo({ center: userMarker.getLngLat(), zoom: 14 });
+    if (!userMarker || !map) return;
+    const ll = userMarker.getLngLat();
+    if (navigating && navProgress) {
+      followNavCamera(ll.lng, ll.lat, null, navProgress.mapBearing, true);
+    } else {
+      map.flyTo({ center: ll, zoom: 14 });
+    }
   }
 
   function ensureMetroLayers() {
@@ -879,6 +1127,24 @@
     setMetroVisibility(true);
   }
 
+  function syncMapFsChrome(on: boolean) {
+    document.documentElement.classList.toggle('map-fs-active', on);
+  }
+
+  function toggleMapFullscreen() {
+    haptic(8);
+    mapFullscreen = !mapFullscreen;
+    syncMapFsChrome(mapFullscreen);
+    requestAnimationFrame(() => map?.resize());
+  }
+
+  function exitMapFullscreen() {
+    if (!mapFullscreen) return;
+    mapFullscreen = false;
+    syncMapFsChrome(false);
+    requestAnimationFrame(() => map?.resize());
+  }
+
   function flyToMetroStation(st: MetroStation) {
     if (!map) return;
     if (mapLayer !== 'metro') setMapLayer('metro');
@@ -892,6 +1158,13 @@
   });
 
   $effect(() => {
+    if (!mapReady || !map) return;
+    mapFullscreen;
+    const t = setTimeout(() => map?.resize(), 150);
+    return () => clearTimeout(t);
+  });
+
+  $effect(() => {
     if (!mapReady) return;
     activeCity;
     metroLineFilter;
@@ -900,35 +1173,165 @@
   });
 </script>
 
-<div class="mappa-page" class:itin-mode={!!activeItin}>
-<PageHeader eyebrow="◎ offline" title="Mappa" sub={mapLayer === 'metro' ? 'Rete metropolitana offline.' : mapLayer === 'route' ? 'Collegamenti tra le tappe del viaggio.' : 'Luoghi, GPS e percorsi a piedi.'} />
-
-{#if !activeItin}
-  <div class="map-toolbar">
-    <div class="cities" role="tablist" aria-label="Città">
-      {#each citta as c (c.id)}
-        {@const th = cityTheme(c.id)}
-        <button
-          type="button"
-          class="city"
-          class:on={activeCity === c.id}
-          style={activeCity === c.id ? `--c:${th.accent}` : undefined}
-          role="tab"
-          aria-selected={activeCity === c.id}
-          onclick={() => flyTo(c.id)}
-        >{c.name}</button>
-      {/each}
-    </div>
-    <div class="layer-tabs" role="tablist" aria-label="Vista mappa">
-      <button type="button" class="layer-tab" class:on={mapLayer === 'poi'} role="tab" aria-selected={mapLayer === 'poi'} onclick={() => setMapLayer('poi')}>POI</button>
-      <button type="button" class="layer-tab" class:on={mapLayer === 'metro'} role="tab" aria-selected={mapLayer === 'metro'} onclick={() => setMapLayer('metro')}>Metro</button>
-      <button type="button" class="layer-tab" class:on={mapLayer === 'route'} role="tab" aria-selected={mapLayer === 'route'} onclick={() => setMapLayer('route')}>Tappe</button>
-    </div>
-  </div>
+<div
+  class="mappa-page"
+  class:map-fs={mapFullscreen}
+  class:itin-mode={!!activeItin}
+  class:navigating-mode={navigating}
+  style="--map-accent: {mapAccent}"
+>
+{#if mapFullscreen}
+  <button
+    type="button"
+    class="map-fs-backdrop"
+    aria-label="Esci da schermo intero"
+    onclick={exitMapFullscreen}
+  ></button>
 {/if}
 
-<div class="map-stage" class:has-itin={!!activeItin} bind:this={mapWrapEl}>
-  <div class="map" class:hide-names={hideNames || mapLayer === 'metro'} class:itin-open={!!activeItin} class:route-focus={!!activeItin || !!navPlan} class:metro-mode={mapLayer === 'metro'} bind:this={mapEl}></div>
+{#if !mapFullscreen && !navigating && !activeItin}
+  <header class="map-head">
+    <div class="map-head-deco" aria-hidden="true">
+      <span class="map-head-line"></span>
+      <span class="map-head-seal">图</span>
+      <span class="map-head-line"></span>
+    </div>
+    <div class="map-head-row">
+      <div class="map-head-titles">
+        <span class="eyebrow">◎ navigatore offline</span>
+        <h1>Mappa</h1>
+      </div>
+      <span class="map-head-pill">{activeCityMeta?.name ?? 'Cina'}</span>
+    </div>
+  </header>
+{/if}
+
+<div
+  class="map-stage"
+  class:fullscreen={mapFullscreen}
+  class:has-itin={!!activeItin}
+  bind:this={mapWrapEl}
+>
+  <div class="map-frame">
+    <div class="map-vignette" aria-hidden="true"></div>
+    <div
+      class="map"
+      class:hide-names={hideNames || mapLayer === 'metro'}
+      class:itin-open={!!activeItin}
+      class:route-focus={!!activeItin || !!navPlan}
+      class:metro-mode={mapLayer === 'metro'}
+      bind:this={mapEl}
+    ></div>
+  </div>
+
+  {#if !navigating && !activeItin}
+    <div class="map-chrome">
+      {#if mapFullscreen}
+        <button type="button" class="fs-exit" onclick={exitMapFullscreen}>
+          <span aria-hidden="true">⊡</span> Esci schermo intero
+        </button>
+      {/if}
+
+      <div class="map-chrome-panel">
+        <div class="poi-search-wrap">
+          <label class="sr-only" for="map-poi-search">Cerca destinazione</label>
+          <span class="poi-search-ic" aria-hidden="true">⌕</span>
+          <input
+            id="map-poi-search"
+            class="poi-search"
+            type="search"
+            placeholder="Cerca luogo…"
+            bind:value={poiQuery}
+            autocomplete="off"
+            autocorrect="off"
+            onfocus={() => setMapLayer('poi')}
+          />
+          {#if poiQuery.trim().length >= 2}
+            <ul class="poi-search-hits" role="listbox" aria-label="Risultati ricerca">
+              {#each poiSearchHits as p (p.id)}
+                <li role="option">
+                  <button type="button" class="poi-hit" onclick={() => pickPoiSearch(p.id)}>
+                    <PoiPhoto id={p.id} category={p.category} name={p.name} variant="thumb" />
+                    <span class="poi-hit-body">
+                      <span class="poi-hit-name">{p.name}</span>
+                      {#if p.nameLocal}<span class="poi-hit-cn">{p.nameLocal}</span>{/if}
+                      <span class="poi-hit-meta">
+                        <span class="poi-hit-cat" style="--c:{CAT_COLOR[p.category]}">{CAT_LABEL[p.category]}</span>
+                        <span class="poi-hit-city">{cittaById.get(p.city)?.name ?? p.city}</span>
+                      </span>
+                    </span>
+                    <span class="poi-hit-go" aria-hidden="true">›</span>
+                  </button>
+                </li>
+              {:else}
+                <li class="poi-hit-empty">Nessun luogo per «{poiQuery.trim()}»</li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+
+        <div class="cities" role="tablist" aria-label="Città">
+          {#each citta as c (c.id)}
+            {@const th = cityTheme(c.id)}
+            <button
+              type="button"
+              class="city"
+              class:on={activeCity === c.id}
+              style={activeCity === c.id ? `--c:${th.accent}` : undefined}
+              role="tab"
+              aria-selected={activeCity === c.id}
+              onclick={() => flyTo(c.id)}
+            >{c.name}</button>
+          {/each}
+        </div>
+
+        <div class="layer-tabs" role="tablist" aria-label="Vista mappa">
+          <button type="button" class="layer-tab" class:on={mapLayer === 'poi'} role="tab" aria-selected={mapLayer === 'poi'} onclick={() => setMapLayer('poi')}>POI</button>
+          <button type="button" class="layer-tab" class:on={mapLayer === 'metro'} role="tab" aria-selected={mapLayer === 'metro'} onclick={() => setMapLayer('metro')}>Metro</button>
+          <button type="button" class="layer-tab" class:on={mapLayer === 'route'} role="tab" aria-selected={mapLayer === 'route'} onclick={() => setMapLayer('route')}>Tappe</button>
+        </div>
+      </div>
+
+      {#if mapLayer === 'poi'}
+        <div class="map-status-row">
+          {#if tilesAvailable}
+            <span class="map-status ok">
+              {#if !online.network}✈ Offline{:else}✓ Online{/if}
+              · mappa{#if routingOffline} · routing{/if}
+            </span>
+          {:else}
+            <span class="map-status warn">🌐 Mappa online</span>
+          {/if}
+          {#if geoNote}<span class="map-status geo">{geoNote}</span>{/if}
+        </div>
+
+        <div class="map-legend">
+          {#each LEGEND as cat (cat)}
+            <span class="lg">
+              <span class="lg-ic" style="border-color:{CAT_COLOR[cat]}; color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>
+              {CAT_LABEL[cat]}
+            </span>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  <div class="map-fabs">
+    {#if !navigating && !activeItin}
+      <button
+        type="button"
+        class="map-fab fs"
+        class:on={mapFullscreen}
+        onclick={toggleMapFullscreen}
+        aria-label={mapFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
+        aria-pressed={mapFullscreen}
+      >
+        {mapFullscreen ? '⊡' : '⛶'}
+      </button>
+    {/if}
+    <button type="button" class="map-fab gps" onclick={recenter} aria-label="Centra sulla posizione">◎</button>
+  </div>
 
   {#if activeItin}
     <aside
@@ -1042,6 +1445,49 @@
       </div>
     </aside>
   {:else if navDestPoi}
+    {#if navigating}
+      <div class="nav-hud" aria-live="polite" aria-label="Navigazione attiva">
+        {#if navProgress?.arrived}
+          <p class="nav-hud-dist">◎</p>
+          <p class="nav-hud-main">Sei arrivato</p>
+          <p class="nav-hud-sub">{navDestPoi.name}</p>
+        {:else if navProgress}
+          <p class="nav-hud-dist">{formatDistanceM(navProgress.distanceToStepM)}</p>
+          <p class="nav-hud-main">
+            {navPlan?.steps?.[navProgress.stepIndex]?.instruction ?? 'Prosegui'}
+          </p>
+          <p class="nav-hud-sub">
+            {formatNavSummary(navProgress.distanceRemainingM, navProgress.durationRemainingS)}
+            {#if rerouteBusy} · ricalcolo…{:else if isOffRoute(navProgress.offRouteM)} · fuori percorso{/if}
+          </p>
+        {:else}
+          <p class="nav-hud-main">Acquisizione GPS…</p>
+        {/if}
+        <div class="nav-hud-actions">
+          <button
+            type="button"
+            class="nav-hud-btn"
+            class:on={navVoice}
+            onclick={() => (navVoice = !navVoice)}
+            aria-pressed={navVoice}
+          >
+            {navVoice ? '🔊' : '🔇'}
+          </button>
+          <button type="button" class="nav-hud-btn stop" onclick={stopNavigation}>Stop</button>
+          <button type="button" class="nav-hud-btn" onclick={recenter}>Centra</button>
+        </div>
+        {#if navPlan?.steps && navPlan.steps.length > 1 && !navProgress?.arrived}
+          <ol class="nav-hud-steps" aria-label="Prossime indicazioni">
+            {#each navPlan.steps.slice(navProgress?.stepIndex ?? 0, (navProgress?.stepIndex ?? 0) + 3) as step, i (i)}
+              <li class:current={i === 0}>
+                <span>{step.instruction}</span>
+                {#if step.distanceM > 0 && i === 0}<em>{formatDistanceM(step.distanceM)}</em>{/if}
+              </li>
+            {/each}
+          </ol>
+        {/if}
+      </div>
+    {:else}
     <aside class="nav-sheet" aria-label="Navigazione verso {navDestPoi.name}">
       <PoiPhoto id={navDestPoi.id} category={navDestPoi.category} name={navDestPoi.name} variant="hero" />
       <div class="nav-head">
@@ -1051,26 +1497,46 @@
           <p class="nav-meta">
             {formatDistanceM(navPlan.distanceM)} · {formatDurationS(navPlan.durationS)} a piedi
             {#if navPlan.fallback}<span class="nav-fallback"> · stima</span>{/if}
+            {#if routingOffline && !navPlan.fallback}<span class="nav-offline"> · offline</span>{/if}
           </p>
         {/if}
       </div>
+      {#if navPlan?.steps?.length && navPlan.steps.length > 1}
+        <ol class="nav-directions" aria-label="Anteprima indicazioni">
+          {#each navPlan.steps.slice(0, 4) as step, i (i)}
+            <li class="nav-dir">
+              <span>{step.instruction}</span>
+              {#if step.distanceM > 0}<em>{formatDistanceM(step.distanceM)}</em>{/if}
+            </li>
+          {/each}
+          {#if navPlan.steps.length > 4}
+            <li class="nav-dir more">+{navPlan.steps.length - 4} passaggi</li>
+          {/if}
+        </ol>
+      {/if}
       <div class="nav-actions">
         {#if navPlan}
-          <button class="nav-btn ghost" onclick={clearNavRoute}>Chiudi</button>
-          <button class="nav-btn" onclick={startNavigation} disabled={navLoading}>
+          <button class="nav-btn ghost" onclick={closeNavSheet}>Chiudi</button>
+          <button class="nav-btn secondary" onclick={() => startNavigation()} disabled={navLoading}>
             {navLoading ? '…' : 'Aggiorna'}
           </button>
+          <button class="nav-btn primary wide" onclick={beginNavigation} disabled={navLoading || !navPlan}>
+            Avvia navigazione
+          </button>
         {:else}
-          <button class="nav-btn" onclick={startNavigation} disabled={navLoading}>
-            {navLoading ? 'Calcolo…' : 'Come arrivare'}
+          <button class="nav-btn primary wide" onclick={() => startNavigation()} disabled={navLoading}>
+            {navLoading ? 'Calcolo percorso…' : 'Calcola percorso'}
           </button>
         {/if}
       </div>
       {#if navError}<p class="nav-err">{navError}</p>{/if}
-      {#if navPlan?.fallback && !navError}
-        <p class="nav-hint">Percorso stimato — per strade reali apri la mappa online almeno una volta in questa zona.</p>
+      {#if navPlan?.fallback && !navError && !routingOffline}
+        <p class="nav-hint">Percorso stimato — installa i tile routing (<code>npm run tiles:routing</code>) per strade reali offline.</p>
+      {:else if navPlan && routingOffline && !navPlan.fallback}
+        <p class="nav-hint ok-hint">Percorso pedonale offline sulle strade reali.</p>
       {/if}
     </aside>
+    {/if}
   {/if}
 
   {#if !activeItin && !navDestPoi && mapLayer === 'metro'}
@@ -1171,81 +1637,376 @@
       {/if}
     </aside>
   {/if}
-
-  <button type="button" class="gps-fab" onclick={recenter} aria-label="Centra sulla posizione">◎</button>
 </div>
-
-{#if !activeItin && mapLayer === 'poi'}
-  <div class="legend">
-    {#each LEGEND as cat (cat)}
-      <span class="lg"><span class="lg-ic" style="border-color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>{CAT_LABEL[cat]}</span>
-    {/each}
-  </div>
-{/if}
-
-{#if !activeItin && mapLayer === 'poi'}
-  {#if tilesAvailable}
-    <p class="banner ok compact">
-      {#if !online.network}✈️ Offline{:else}✓{/if}
-      · mappa locale{#if routingOffline} · routing{/if}
-    </p>
-  {:else}
-    <p class="banner warn compact">🌐 Mappa online — <code>npm run tiles:all</code></p>
-  {/if}
-  {#if geoNote}<p class="banner compact">{geoNote}</p>{/if}
-{/if}
 </div>
 
 <style>
-  .mappa-page { margin-top: -8px; }
-  .mappa-page.itin-mode :global(.ph) {
-    margin-bottom: 6px;
+  .mappa-page {
+    margin-top: -6px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
   }
-  .mappa-page.itin-mode :global(.ph .sub) {
+  .mappa-page.map-fs {
+    margin-top: 0;
+    flex: 1;
+    min-height: 0;
+  }
+  .map-fs-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 399;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--map-accent) 8%, transparent), transparent 70%),
+      rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: mapFsIn 0.28s var(--ease) both;
+  }
+  @keyframes mapFsIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ── Header compatto ── */
+  .map-head { margin-bottom: 12px; }
+  .map-head-deco {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .map-head-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--line-strong) 25%,
+      color-mix(in srgb, var(--map-accent) 35%, transparent) 50%,
+      var(--line-strong) 75%,
+      transparent
+    );
+  }
+  .map-head-seal {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    font-family: var(--hanzi);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--map-accent);
+    background: color-mix(in srgb, var(--map-accent) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--map-accent) 30%, var(--line));
+    border-radius: 8px;
+    box-shadow: 0 0 18px color-mix(in srgb, var(--map-accent) 22%, transparent);
+  }
+  .map-head-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .map-head-titles h1 {
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 2px 0 0;
+  }
+  .map-head-pill {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--map-accent);
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--map-accent) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--map-accent) 32%, var(--line));
+  }
+
+  .mappa-page.navigating-mode .map-head,
+  .mappa-page.itin-mode .map-head { display: none; }
+  .mappa-page.navigating-mode .map-chrome-panel,
+  .mappa-page.navigating-mode .map-legend,
+  .mappa-page.navigating-mode .map-status-row {
     display: none;
   }
-  .map-toolbar {
+  .mappa-page.navigating-mode .map-stage {
+    min-height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 24px);
+  }
+
+  /* ── Stage & frame ── */
+  .map-stage {
+    position: relative;
+    flex: 1;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+  }
+  .map-stage.has-itin { margin-top: -2px; }
+  .map-stage.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(100%, 480px);
+    height: 100dvh;
+    z-index: 400;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    background: var(--paper);
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.55);
+  }
+  .map-frame {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--map-accent) 28%, var(--line-strong));
+    box-shadow:
+      var(--shadow-lg),
+      0 0 0 1px color-mix(in srgb, var(--map-accent) 8%, transparent),
+      0 20px 48px color-mix(in srgb, var(--map-accent) 10%, transparent);
+  }
+  .map-stage.fullscreen .map-frame {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    height: 100%;
+  }
+  .map-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.38) 0%, transparent 22%, transparent 78%, rgba(0, 0, 0, 0.28) 100%),
+      radial-gradient(ellipse 90% 70% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.12) 100%);
+  }
+  .map {
+    width: 100%;
+    height: 100%;
+    min-height: 360px;
+  }
+  .map-stage.fullscreen .map {
+    min-height: 100%;
+  }
+  .map.metro-mode :global(.poi-pin) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* ── Chrome flottante ── */
+  .map-chrome {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 10px 12px;
+  }
+  .map-chrome > * { pointer-events: auto; }
+  .fs-exit {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: color-mix(in srgb, #000 55%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    margin-bottom: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  }
+  .map-chrome-panel {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+    backdrop-filter: saturate(1.5) blur(18px);
+    -webkit-backdrop-filter: saturate(1.5) blur(18px);
+    border: 1px solid color-mix(in srgb, #fff 12%, var(--line-strong));
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
-  .cities { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .map-stage.fullscreen .map-chrome-panel {
+    margin-top: 0;
+  }
+
+  .poi-search-wrap {
+    position: relative;
+    z-index: 20;
+  }
+  .poi-search-ic {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    color: var(--jade-bright);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .poi-search {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    font-size: 0.92rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid color-mix(in srgb, var(--jade) 25%, var(--line-strong));
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .poi-search:focus {
+    border-color: color-mix(in srgb, var(--jade) 55%, var(--line-strong));
+    box-shadow: 0 0 0 3px var(--jade-soft);
+  }
+  .poi-search-hits {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    max-height: min(45vh, 280px);
+    overflow-y: auto;
+    background: var(--sheet-bg-solid);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+  }
+  .poi-hit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px;
+    text-align: left;
+    border-radius: var(--radius-sm);
+    transition: background 0.12s;
+  }
+  .poi-hit:active { background: var(--paper-2); }
+  .poi-hit-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .poi-hit-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .poi-hit-cn {
+    font-family: var(--hanzi);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+  .poi-hit-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .poi-hit-cat {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .poi-hit-city {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-faint);
+  }
+  .poi-hit-go {
+    flex: none;
+    color: var(--jade-bright);
+    font-size: 1.15rem;
+  }
+  .poi-hit-empty {
+    padding: 12px;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+
+  .cities {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0;
+  }
   .cities::-webkit-scrollbar { display: none; }
   .city {
     flex: none;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-pill);
-    padding: 7px 13px;
-    background: var(--surface);
+    padding: 6px 12px;
+    background: color-mix(in srgb, var(--surface) 75%, transparent);
     color: var(--ink-faint);
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.12s;
   }
   .city.on {
-    background: color-mix(in srgb, var(--c, var(--jade)) 90%, #000);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c, var(--jade)) 92%, #000), var(--c, var(--jade)));
     color: #fff;
-    border-color: var(--c, var(--jade));
+    border-color: transparent;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--c, var(--jade)) 35%, transparent);
   }
+  .city:active { transform: scale(0.97); }
+
   .layer-tabs {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
     padding: 4px;
-    background: var(--paper-2);
+    background: color-mix(in srgb, var(--paper-2) 80%, transparent);
     border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
   }
   .layer-tab {
-    padding: 8px 6px;
+    padding: 7px 6px;
     border: none;
-    border-radius: calc(var(--radius-sm) - 2px);
+    border-radius: var(--radius-pill);
     background: transparent;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--ink-faint);
     transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   }
@@ -1253,42 +2014,121 @@
     background: var(--surface);
     color: var(--ink);
     box-shadow: var(--shadow-sm);
+    border: 1px solid var(--line-strong);
   }
 
-  .map-stage {
-    position: relative;
-    flex: 1;
-    min-height: 0;
+  .map-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-self: flex-start;
+    margin-top: auto;
   }
-  .map-stage.has-itin { margin-top: -4px; }
-  .map {
-    width: 100%;
-    height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 132px);
-    min-height: 340px;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    border: 1px solid var(--line-strong);
-    box-shadow: var(--shadow-md);
-  }
-  .map.metro-mode :global(.poi-pin) {
-    visibility: hidden;
-    pointer-events: none;
-  }
-
-  .gps-fab {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 4;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    background: rgba(12, 9, 7, 0.9);
+  .map-status {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
     backdrop-filter: blur(10px);
+    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    color: var(--ink-soft);
+  }
+  .map-status.ok {
+    color: var(--jade-bright);
+    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+    background: color-mix(in srgb, var(--jade) 12%, transparent);
+  }
+  .map-status.warn {
+    color: var(--cinabro-bright);
+    background: var(--cinabro-soft);
+  }
+  .map-status.geo { color: var(--gold); }
+
+  .map-legend {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 6px 2px 2px;
+    max-width: 100%;
+  }
+  .map-legend::-webkit-scrollbar { display: none; }
+  .lg {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #fff;
+    padding: 5px 10px 5px 6px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, #000 52%, transparent);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .lg-ic {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    border-radius: 7px;
+    border: 1.5px solid;
+    background: color-mix(in srgb, currentColor 15%, transparent);
+  }
+
+  /* ── FABs ── */
+  .map-fabs {
+    position: absolute;
+    bottom: 56px;
+    right: 10px;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .map-stage.fullscreen .map-fabs {
+    bottom: calc(14px + var(--safe-bottom));
+    right: 12px;
+  }
+  .map-fab {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, #fff 18%, var(--line-strong));
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
     color: var(--ink-soft);
     font-size: 17px;
-    box-shadow: var(--shadow-sm);
+    line-height: 1;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.15s var(--ease), border-color 0.15s;
+  }
+  .map-fab:active { transform: scale(0.94); }
+  .map-fab.fs.on,
+  .map-fab.fs[aria-pressed='true'] {
+    color: var(--map-accent);
+    border-color: color-mix(in srgb, var(--map-accent) 45%, var(--line));
+    background: color-mix(in srgb, var(--map-accent) 14%, var(--surface-elevated));
+  }
+  .map-fab.gps {
+    color: var(--jade-bright);
+    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+    background: color-mix(in srgb, var(--jade) 14%, var(--surface-elevated));
+    box-shadow:
+      0 4px 16px color-mix(in srgb, var(--jade) 25%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .metro-sheet {
@@ -1302,11 +2142,15 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px 12px;
-    background: rgba(12, 9, 7, 0.93);
-    backdrop-filter: blur(14px);
-    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+    backdrop-filter: saturate(1.4) blur(18px);
+    -webkit-backdrop-filter: saturate(1.4) blur(18px);
+    border: 1px solid color-mix(in srgb, var(--map-accent) 22%, var(--line-strong));
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 24px color-mix(in srgb, var(--map-accent) 10%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
   .metro-sheet.route-tab {
     max-height: 52%;
@@ -1533,22 +2377,22 @@
     letter-spacing: 0.06em;
     color: var(--jade-bright);
   }
-  .map.itin-open {
-    height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 108px);
-    min-height: 340px;
-  }
   .nav-sheet {
     position: absolute;
     left: 10px;
     right: 10px;
     bottom: 10px;
     z-index: 5;
-    background: rgba(14, 11, 8, 0.94);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--line-strong);
+    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+    backdrop-filter: saturate(1.4) blur(18px);
+    -webkit-backdrop-filter: saturate(1.4) blur(18px);
+    border: 1px solid color-mix(in srgb, var(--jade) 28%, var(--line-strong));
     border-radius: var(--radius-md);
     padding: 14px 16px;
-    box-shadow: var(--shadow-lg);
+    box-shadow:
+      var(--shadow-lg),
+      0 0 28px color-mix(in srgb, var(--jade) 12%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
   .nav-label {
     display: block;
@@ -1567,25 +2411,150 @@
     color: var(--jade-bright);
   }
   .nav-fallback { color: var(--ink-faint); }
-  .nav-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .nav-offline { color: var(--jade-bright); }
+  .nav-directions {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .nav-dir {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--ink-body);
+  }
+  .nav-dir em {
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    flex: none;
+  }
+  .nav-dir.more { color: var(--ink-faint); font-size: 0.78rem; }
+  .nav-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .nav-btn {
     flex: 1;
+    min-width: 0;
     font-family: var(--mono);
     font-size: 11px;
     font-weight: 600;
     border-radius: var(--radius-pill);
-    padding: 10px 14px;
-    border: 1px solid var(--jade);
-    background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
-    color: #fff;
-  }
-  .nav-btn.ghost {
-    flex: none;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
     background: var(--surface);
-    border-color: var(--line-strong);
     color: var(--ink-soft);
   }
+  .nav-btn.primary {
+    flex: 1.4;
+    border-color: var(--jade);
+    background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
+    color: #fff;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--jade) 30%, transparent);
+  }
+  .nav-btn.secondary {
+    flex: none;
+    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+    color: var(--jade-bright);
+  }
+  .nav-btn.wide { flex: 1 1 100%; }
+  .nav-btn.ghost { flex: none; }
   .nav-btn:disabled { opacity: 0.6; }
+  .nav-hud {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: 10px;
+    z-index: 7;
+    padding: 14px 16px 12px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    border: 1px solid color-mix(in srgb, var(--jade) 35%, var(--line-strong));
+    box-shadow: var(--shadow-lg), 0 0 32px color-mix(in srgb, var(--jade) 15%, transparent);
+  }
+  .nav-hud-dist {
+    font-family: var(--serif);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--jade-bright);
+    margin-bottom: 4px;
+  }
+  .nav-hud-main {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+  .nav-hud-sub {
+    margin-top: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .nav-hud-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .nav-hud-btn {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink-soft);
+  }
+  .nav-hud-btn.stop {
+    color: var(--cinabro-bright);
+    border-color: color-mix(in srgb, var(--cinabro) 35%, var(--line));
+  }
+  .nav-hud-btn.on {
+    color: var(--jade-bright);
+    border-color: color-mix(in srgb, var(--jade) 40%, var(--line));
+    background: color-mix(in srgb, var(--jade) 12%, var(--surface));
+  }
+  .nav-hud-steps {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 88px;
+    overflow-y: auto;
+  }
+  .nav-hud-steps li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    line-height: 1.35;
+  }
+  .nav-hud-steps li.current {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .nav-hud-steps em {
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 9px;
+    flex: none;
+  }
   .nav-err, .nav-hint {
     margin: 10px 0 0;
     font-size: 0.78rem;
@@ -1593,6 +2562,7 @@
     color: var(--cinabro-bright);
   }
   .nav-hint { color: var(--ink-faint); }
+  .nav-hint.ok-hint { color: var(--jade-bright); }
 
   .itin-sheet {
     position: absolute;
@@ -1602,7 +2572,7 @@
     z-index: 6;
     display: flex;
     flex-direction: column;
-    background: rgba(10, 8, 6, 0.94);
+    background: var(--sheet-bg-solid);
     backdrop-filter: blur(16px);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
@@ -1704,7 +2674,7 @@
     margin: 8px 0 0;
     padding: 10px 12px;
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--gold) 14%, rgba(10, 8, 6, 0.9));
+    background: color-mix(in srgb, var(--gold) 14%, var(--sheet-bg-solid));
     border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--line));
     font-size: 0.76rem;
     line-height: 1.45;
@@ -1862,42 +2832,6 @@
   }
 
 
-  .banner {
-    margin-top: 10px;
-    font-size: 0.78rem;
-    color: var(--ink-faint);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-xs);
-    padding: 10px 12px;
-    line-height: 1.5;
-  }
-  .banner.ok {
-    color: var(--jade-bright);
-    background: var(--jade-soft);
-    border-color: rgba(61, 154, 106, 0.35);
-  }
-  .banner.warn { color: var(--cinabro-bright); background: var(--cinabro-soft); }
-  .banner.compact {
-    margin-top: 8px;
-    padding: 8px 10px;
-    font-size: 0.72rem;
-  }
-  .banner code { font-family: var(--mono); font-size: 0.9em; color: var(--cinabro-bright); }
-
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
-  .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
-  .lg-ic {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid;
-    background: var(--surface);
-    display: inline-grid;
-    place-items: center;
-    font-size: 11px;
-  }
-
   :global(.poi-pin) { position: relative; cursor: pointer; width: 0; height: 0; }
   :global(.poi-pin.pin-hidden) {
     visibility: hidden;
@@ -1914,7 +2848,7 @@
   :global(.pin-label) {
     position: absolute; left: 0; top: 18px; transform: translateX(-50%);
     white-space: nowrap; font-family: var(--mono); font-size: 10px; font-weight: 600;
-    color: #fff; background: rgba(12, 9, 7, 0.88); padding: 3px 8px; border-radius: 6px;
+    color: #fff; background: var(--fab-bg); padding: 3px 8px; border-radius: 6px;
     pointer-events: none; border: 1px solid var(--c);
     backdrop-filter: blur(4px);
   }
@@ -1952,5 +2886,13 @@
     width: 16px; height: 16px; border-radius: 50%;
     background: #3b8bff; border: 3px solid #fff;
     box-shadow: 0 0 0 4px rgba(59, 139, 255, 0.3);
+    transition: transform 0.3s var(--ease), box-shadow 0.3s;
+  }
+  :global(.user-dot.nav-active) {
+    width: 20px; height: 20px;
+    background: #2d8a62;
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--jade) 35%, transparent),
+      0 0 20px color-mix(in srgb, var(--jade) 50%, transparent);
   }
 </style>

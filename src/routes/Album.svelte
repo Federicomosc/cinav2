@@ -123,7 +123,7 @@
 />
 
 {#if photos.length === 0}
-  <EmptyState icon="📷" title="Nessuna foto ancora" hint="Le foto restano solo su questo dispositivo.">
+  <EmptyState hanzi="图" title="Nessuna foto ancora" hint="Importa dalla galleria — le foto restano solo su questo dispositivo.">
     <label class="btn-primary pick-btn">
       {importing ? 'Importo…' : 'Scegli foto'}
       <input type="file" accept="image/*" multiple onchange={onPick} hidden disabled={importing} />
@@ -147,8 +147,12 @@
       </h2>
       <div class="grid">
         {#each sec.items as p (p.id)}
-          <figure class="cell">
+          <figure class="cell pressable">
             <img src={urls.get(p.id)} alt={p.caption ?? 'Foto viaggio'} loading="lazy" />
+            <div class="cell-shade" aria-hidden="true"></div>
+            {#if p.day}
+              <span class="cell-date">{shortDate(p.day)}</span>
+            {/if}
             <button type="button" class="del" aria-label="Elimina foto" onclick={() => remove(p.id)}>✕</button>
           </figure>
         {/each}
@@ -209,33 +213,67 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: 8px;
   }
   .cell {
     position: relative;
     aspect-ratio: 1;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     overflow: hidden;
     border: 1px solid var(--line-strong);
     background: var(--surface);
     margin: 0;
+    box-shadow:
+      var(--shadow-sm),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: rotate(-0.5deg);
+    transition: transform 0.3s var(--ease), box-shadow 0.3s;
+  }
+  .cell:nth-child(even) { transform: rotate(0.5deg); }
+  .cell:active {
+    transform: scale(0.97) rotate(0deg);
+    box-shadow: var(--shadow-md);
   }
   .cell img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.35s var(--ease);
+  }
+  .cell:active img { transform: scale(1.06); }
+  .cell-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+    pointer-events: none;
+  }
+  .cell-date {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    z-index: 1;
   }
   .del {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 6px;
+    right: 6px;
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    background: rgba(6, 5, 4, 0.72);
+    background: color-mix(in srgb, var(--overlay) 72%, transparent);
+    backdrop-filter: blur(6px);
     color: #fff;
     font-size: 12px;
     display: grid;
     place-items: center;
+    z-index: 2;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 </style>

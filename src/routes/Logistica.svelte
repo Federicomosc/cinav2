@@ -7,7 +7,9 @@
   import { db, now } from '../db/dexie';
   import { liveQuery } from 'dexie';
   import type { Giorno, GiornoSchedule } from '../data/types';
-  import { cityThemeByItalianName } from '../lib/city-theme';
+  import { cityThemeByItalianName, cityCoverSrc } from '../lib/city-theme';
+  import { daySwipe } from '../lib/day-swipe';
+  import { haptic } from '../lib/haptic';
 
   const SCHEDULE_SLOTS: { key: keyof GiornoSchedule; label: string }[] = [
     { key: 'mattino', label: 'Mattino' },
@@ -46,6 +48,8 @@
   let focusReady = $state(false);
   let chipRow: HTMLDivElement | undefined = $state();
   let checkedActs = $state<Set<string>>(new Set());
+  let swipeX = $state(0);
+  let swiping = $state(false);
 
   // ripristina l'ultimo giorno visto
   $effect(() => {
@@ -93,16 +97,27 @@
   const isToday = $derived(day.date === oggi.todayIso);
   const isFirstDayInCity = $derived(giorni.find((g) => g.city === day.city)?.n === day.n);
   const daySchedule = $derived(scheduleEntries(day));
+  const coverSrc = $derived(meta.id ? cityCoverSrc(meta.id) : '');
+  const tripPct = $derived(Math.round((focus / 20) * 100));
+
+  function goDay(delta: -1 | 1) {
+    const n = clampDay(focus + delta);
+    if (n === focus) return;
+    focus = n;
+    haptic(10);
+  }
 
   function prev() {
-    if (focus > 1) focus = clampDay(focus - 1);
+    goDay(-1);
   }
   function next() {
-    if (focus < 20) focus = clampDay(focus + 1);
+    goDay(1);
   }
 
   function pick(n: number) {
-    focus = clampDay(n);
+    const clamped = clampDay(n);
+    if (clamped !== focus) haptic(8);
+    focus = clamped;
   }
 
   // scroll chip attivo al centro
@@ -113,7 +128,7 @@
   });
 </script>
 
-<div class="agenda">
+<div class="agenda" style="--day-accent: {meta.accent}">
   <header class="top">
     <div class="top-deco" aria-hidden="true">
       <span class="top-line"></span>
@@ -122,10 +137,38 @@
     </div>
     <p class="eyebrow">Agenda · 20 giorni</p>
     <h1>Il viaggio</h1>
-    <p class="hint prose-lead">Un giorno alla volta — scorri i numeri o usa le frecce.</p>
+    <p class="hint prose-lead">Scorri la scheda o i chip per navigare giorno per giorno.</p>
   </header>
 
-  <!-- Navigazione giorno -->
+  <!-- Avanzamento viaggio -->
+  <div class="trip-meter" aria-label="Giorno {focus} di 20, {tripPct}% del viaggio">
+    <div class="trip-meter-head">
+      <div class="trip-meter-title">
+        <span class="trip-meter-city" style="--c:{meta.accent}">{meta.icon} {day.city}</span>
+        <span class="trip-meter-lbl">Giorno {focus} di 20</span>
+      </div>
+      <span class="trip-meter-pct">{tripPct}%</span>
+    </div>
+    <div class="trip-meter-track">
+      <div class="trip-meter-fill" style="width:{tripPct}%"></div>
+    </div>
+    <div class="trip-meter-dots" aria-hidden="true">
+      {#each giorni as g (g.n)}
+        {@const cm = CITY(g.city)}
+        <button
+          type="button"
+          class="trip-dot"
+          class:on={focus === g.n}
+          class:today={g.date === oggi.todayIso}
+          style="--c:{cm.accent}"
+          onclick={() => pick(g.n)}
+          aria-label="Giorno {g.n}"
+        ></button>
+      {/each}
+    </div>
+  </div>
+
+  <!-- Selettore rapido -->
   <nav class="day-nav" aria-label="Navigazione giorni">
     <button class="nav-btn" onclick={prev} disabled={focus <= 1} aria-label="Giorno precedente">‹</button>
 
@@ -153,33 +196,71 @@
     <button class="nav-btn" onclick={next} disabled={focus >= 20} aria-label="Giorno successivo">›</button>
   </nav>
 
-  <!-- Scheda del giorno -->
-  {#key focus}
-    <article class="day-sheet" style="--c:{meta.accent}">
+  <!-- Scheda del giorno (swipe) -->
+  <div
+    class="day-stage"
+    class:swiping
+    style="transform: translateX({swipeX}px)"
+    use:daySwipe={{
+      onNext: next,
+      onPrev: prev,
+      canNext: () => focus < 20,
+      canPrev: () => focus > 1,
+      onDrag: (dx) => {
+        swiping = true;
+        swipeX = dx;
+      },
+      onDragEnd: () => {
+        swiping = false;
+        swipeX = 0;
+      },
+    }}
+  >
+    <div class="swipe-hint" aria-hidden="true">
+      <span class="swipe-arrow" class:off={focus <= 1}>‹</span>
+      <span class="swipe-lbl">Scorri</span>
+      <span class="swipe-arrow" class:off={focus >= 20}>›</span>
+    </div>
+
+    {#key focus}
+      <article class="day-sheet" style="--c:{meta.accent}">
       <div class="sheet-accent" aria-hidden="true"></div>
 
       <header class="sheet-head">
-        <span class="sheet-wm" aria-hidden="true">{meta.hanzi}</span>
-        <div class="sheet-meta">
-          <span class="sheet-n">{weekdayShort(day.date)} · Giorno {day.n} · {shortDate(day.date)}</span>
+        <div class="sheet-cover-zone" class:has-img={!!coverSrc}>
+          {#if coverSrc}
+            <img class="sheet-cover" src={coverSrc} alt="" loading="lazy" decoding="async" />
+          {:else}
+            <div class="sheet-cover-fallback" aria-hidden="true"></div>
+          {/if}
+          <div class="sheet-scrim" aria-hidden="true"></div>
+          <div class="sheet-accent-line" aria-hidden="true"></div>
+          <span class="sheet-wm" aria-hidden="true">{meta.hanzi}</span>
+          <span class="sheet-day-stamp">{String(day.n).padStart(2, '0')}</span>
           {#if isToday}<span class="sheet-today">Oggi</span>{/if}
+
+          <div class="sheet-hero">
+            <span class="sheet-n">{weekdayShort(day.date)} · Giorno {day.n} · {shortDate(day.date)}</span>
+            <div class="sheet-city">
+              <span class="city-icon" aria-hidden="true">{meta.icon}</span>
+              <span class="city-name">{day.city}</span>
+              <span class="city-hanzi">{meta.hanzi}</span>
+            </div>
+            <h2 class="sheet-title">{day.title}</h2>
+          </div>
         </div>
-        <div class="sheet-city">
-          <span class="city-icon" aria-hidden="true">{meta.icon}</span>
-          <span>{day.city}</span>
-          <span class="city-hanzi">{meta.hanzi}</span>
-        </div>
-        <h2 class="sheet-title">{day.title}</h2>
       </header>
 
       {#if tr}
-        <div class="travel-banner">
+        <div class="travel-banner" class:unconfirmed={!tr.confirmed}>
           <span class="tb-ic" aria-hidden="true">{tr.type === 'flight' ? '✈' : tr.type === 'train' ? '🚄' : '🚌'}</span>
-          <div>
-            <b>{tr.code}</b> · {tr.from} → {tr.to}
+          <div class="tb-body">
+            <span class="tb-type">{tr.type === 'flight' ? 'Volo' : tr.type === 'train' ? 'Treno' : 'Bus'}</span>
+            <b class="tb-code">{tr.code}</b>
+            <span class="tb-route">{tr.from} → {tr.to}</span>
             <span class="tb-time">
               {#if hhmm(tr.departAt)}{hhmm(tr.departAt)}{/if}
-              {#if !tr.confirmed} · da prenotare{/if}
+              {#if !tr.confirmed}<span class="tb-warn"> · da prenotare</span>{/if}
             </span>
           </div>
         </div>
@@ -253,8 +334,11 @@
 
       {#if hotel && isFirstDayInCity}
         <div class="hotel">
-          <span aria-hidden="true">🏨</span>
-          <span>{hotel.name}</span>
+          <span class="hotel-ic" aria-hidden="true">🏨</span>
+          <div class="hotel-body">
+            <span class="hotel-lbl">Alloggio</span>
+            <span class="hotel-name">{hotel.name}</span>
+          </div>
           {#if meta.id}
             <button class="hotel-link" onclick={() => go('citta', meta.id!)}>Guida ›</button>
           {/if}
@@ -267,24 +351,33 @@
         <button class="foot-btn primary" onclick={next} disabled={focus >= 20}>Domani →</button>
       </footer>
     </article>
-  {/key}
+    {/key}
+  </div>
 
   <!-- Panoramica rapida (tutti i giorni, compatto) -->
   <details class="overview">
     <summary>
-      <span>Vedi tutti i 20 giorni</span>
-      <span class="ov-chev" aria-hidden="true">▾</span>
+      <span class="ov-sum-label">Panoramica</span>
+      <span class="ov-sum-sub">Tutti i 20 giorni</span>
+      <span class="ov-chev" aria-hidden="true">›</span>
     </summary>
     <div class="ov-list">
       {#each giorni as g (g.n)}
         {@const cm = CITY(g.city)}
-        <button class="ov-row" style="--c:{cm.accent}" onclick={() => pick(g.n)}>
-          <span class="ov-n">{g.n}</span>
+        <button
+          class="ov-row"
+          class:on={focus === g.n}
+          class:today={g.date === oggi.todayIso}
+          style="--c:{cm.accent}"
+          onclick={() => pick(g.n)}
+        >
+          <span class="ov-n">{String(g.n).padStart(2, '0')}</span>
           <span class="ov-body">
             <span class="ov-title">{g.title}</span>
-            <span class="ov-sub">{shortDate(g.date)} · {g.city}</span>
+            <span class="ov-sub">{shortDate(g.date)} · {cm.icon} {g.city}</span>
           </span>
           {#if g.acts[0]}<span class="ov-preview">{g.acts[0].label}</span>{/if}
+          <span class="ov-go" aria-hidden="true">›</span>
         </button>
       {/each}
     </div>
@@ -292,9 +385,9 @@
 </div>
 
 <style>
-  .agenda { padding-bottom: 20px; }
+  .agenda { padding-bottom: 24px; }
 
-  .top { margin-bottom: 20px; }
+  .top { margin-bottom: 16px; }
   .top-deco {
     display: flex;
     align-items: center;
@@ -307,49 +400,189 @@
     background: linear-gradient(
       90deg,
       transparent,
-      var(--line-strong) 25%,
-      color-mix(in srgb, var(--cinabro) 25%, transparent) 50%,
-      var(--line-strong) 75%,
+      var(--line-strong) 20%,
+      color-mix(in srgb, var(--city-accent, var(--cinabro)) 35%, transparent) 50%,
+      var(--line-strong) 80%,
       transparent
     );
   }
   .top-seal {
     flex: none;
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     display: grid;
     place-items: center;
     font-family: var(--hanzi);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-    border: 1px solid rgba(232, 72, 40, 0.28);
-    border-radius: 6px;
-    box-shadow: 0 0 14px var(--cinabro-glow);
+    color: var(--city-accent, var(--cinabro-bright));
+    background: color-mix(in srgb, var(--city-accent, var(--cinabro)) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--city-accent, var(--cinabro)) 30%, var(--line));
+    border-radius: 8px;
+    box-shadow: 0 0 18px color-mix(in srgb, var(--city-accent, var(--cinabro)) 22%, transparent);
   }
   h1 {
-    font-size: 2.15rem;
+    font-size: 2.4rem;
     margin: 4px 0 8px;
     font-family: var(--serif);
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-soft) 90%);
+    letter-spacing: -0.025em;
+    background: linear-gradient(
+      135deg,
+      var(--ink) 0%,
+      color-mix(in srgb, var(--ink-soft) 85%, var(--city-accent, var(--cinabro))) 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .hint {
-    max-width: 34ch;
-    font-size: 0.92rem;
+    max-width: 38ch;
+    font-size: 0.94rem;
+    padding-left: 14px;
+    border-left: 2px solid color-mix(in srgb, var(--city-accent, var(--cinabro)) 45%, transparent);
   }
 
-  .schedule {
-    margin: 0 20px 16px;
-    background: linear-gradient(160deg, var(--paper-2) 0%, var(--surface) 100%);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
+  /* Trip meter */
+  .trip-meter {
+    margin-bottom: 14px;
+    padding: 16px 18px 14px;
+    background: color-mix(in srgb, var(--surface-elevated) 85%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    border: 1px solid color-mix(in srgb, var(--day-accent) 22%, var(--line-strong));
+    border-radius: var(--radius-lg);
+    box-shadow:
+      var(--shadow-md),
+      0 12px 32px color-mix(in srgb, var(--day-accent) 8%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .trip-meter-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .trip-meter-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .trip-meter-city {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .trip-meter-lbl {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .trip-meter-pct {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--day-accent);
+    letter-spacing: 0.06em;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--day-accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--day-accent) 30%, var(--line));
+  }
+  .trip-meter-track {
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--line);
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    margin-bottom: 14px;
+  }
+  .trip-meter-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--day-accent), var(--gold));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--day-accent) 45%, transparent);
+    transition: width 0.45s var(--ease);
+  }
+  .trip-meter-dots {
+    display: flex;
+    gap: 3px;
+    justify-content: space-between;
+  }
+  .trip-dot {
+    flex: 1;
+    height: 7px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--line-strong);
+    transition: background 0.2s, transform 0.2s var(--ease), box-shadow 0.2s;
+  }
+  .trip-dot.on {
+    background: var(--c, var(--cinabro));
+    transform: scaleY(1.4);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c, var(--cinabro)) 50%, transparent);
+  }
+  .trip-dot.today:not(.on) {
+    background: color-mix(in srgb, var(--cinabro) 55%, var(--line-strong));
+    box-shadow: 0 0 6px var(--cinabro-glow);
+  }
+
+  /* Swipe stage */
+  .day-stage {
+    position: relative;
+    touch-action: pan-y;
+    transition: transform 0.22s var(--ease);
+    will-change: transform;
+  }
+  .day-stage.swiping {
+    transition: none;
+  }
+  .swipe-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    opacity: 0.85;
+  }
+  .swipe-lbl {
+    padding: 5px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid color-mix(in srgb, var(--day-accent) 25%, var(--line-strong));
+    background: color-mix(in srgb, var(--day-accent) 6%, var(--surface));
+    color: var(--ink-soft);
+  }
+  .swipe-arrow {
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--day-accent);
+    transition: opacity 0.2s;
+  }
+  .swipe-arrow.off { opacity: 0.2; }
+
+  .schedule {
+    margin: 16px 18px;
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--c) 20%, var(--line-strong));
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   .schedule-toggle {
     display: flex;
@@ -403,14 +636,14 @@
     left: 27px;
     top: 12px;
     bottom: 14px;
-    width: 2px;
+    width: 1px;
     border-radius: 1px;
     background: linear-gradient(
       180deg,
       var(--c),
       color-mix(in srgb, var(--c) 30%, var(--line-strong))
     );
-    opacity: 0.55;
+    opacity: 0.65;
   }
   .tl-row {
     display: flex;
@@ -422,14 +655,14 @@
   .tl-row::before {
     content: '';
     position: absolute;
-    left: 0;
+    left: -1px;
     top: 50%;
     transform: translateY(-50%);
-    width: 7px;
-    height: 7px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: var(--c);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--c) 50%, transparent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
     border: 2px solid var(--surface);
   }
   .tl-time {
@@ -449,34 +682,37 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 20px;
-    padding: 10px 12px;
-    background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
+    margin-bottom: 16px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .nav-btn {
     flex: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: var(--paper-2);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--surface);
     border: 1px solid var(--line-strong);
     font-size: 1.35rem;
     color: var(--ink-soft);
     display: grid;
     place-items: center;
     line-height: 1;
-    transition: transform 0.15s var(--ease), border-color 0.15s, color 0.15s;
+    transition: transform 0.15s var(--ease), border-color 0.15s, color 0.15s, box-shadow 0.15s;
     box-shadow: var(--shadow-sm);
   }
   .nav-btn:active:not(:disabled) {
     transform: scale(0.94);
-    border-color: var(--cinabro);
+    border-color: var(--day-accent);
     color: var(--ink);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--day-accent) 20%, transparent);
   }
-  .nav-btn:disabled { opacity: 0.28; }
+  .nav-btn:disabled { opacity: 0.25; }
   .day-chips {
     flex: 1;
     min-width: 0;
@@ -554,35 +790,19 @@
   /* Day sheet */
   .day-sheet {
     position: relative;
-    background: linear-gradient(
-      168deg,
-      color-mix(in srgb, var(--surface-hi) 85%, var(--c)) 0%,
-      var(--surface) 38%,
-      color-mix(in srgb, var(--surface) 94%, var(--paper)) 100%
-    );
-    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border: 1px solid color-mix(in srgb, var(--c) 28%, var(--line-strong));
     border-radius: var(--radius-lg);
     padding: 0;
     overflow: hidden;
     box-shadow:
-      var(--shadow-md),
-      0 0 48px color-mix(in srgb, var(--c) 14%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    animation: sheetIn 0.32s var(--ease) both;
-  }
-  .day-sheet::after {
-    content: '';
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in srgb, var(--c) 18%, transparent) 0%, transparent 70%);
-    pointer-events: none;
+      var(--shadow-lg),
+      0 0 0 1px color-mix(in srgb, var(--c) 8%, transparent),
+      0 28px 56px color-mix(in srgb, var(--c) 14%, transparent);
+    animation: sheetIn 0.38s var(--ease) both;
   }
   @keyframes sheetIn {
-    from { opacity: 0; transform: translateY(10px) scale(0.99); }
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
     to { opacity: 1; transform: none; }
   }
   .sheet-accent {
@@ -590,131 +810,221 @@
     background: linear-gradient(
       90deg,
       var(--c),
-      color-mix(in srgb, var(--c) 50%, var(--cinabro-bright)),
-      color-mix(in srgb, var(--c) 25%, transparent)
+      color-mix(in srgb, var(--c) 45%, var(--cinabro-bright)),
+      color-mix(in srgb, var(--c) 15%, transparent)
+    );
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--c) 40%, transparent);
+  }
+  .sheet-head { padding: 0; }
+  .sheet-cover-zone {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .sheet-cover-zone:not(.has-img) .sheet-cover-fallback {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--c) 35%, var(--surface-hi)) 0%,
+      var(--surface) 100%
     );
   }
-  .sheet-head {
-    position: relative;
-    padding: 22px 20px 18px;
-    overflow: hidden;
+  .sheet-cover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(1.2) contrast(1.06);
+    transform: scale(1.03);
+  }
+  .sheet-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(125deg, color-mix(in srgb, #000 50%, transparent) 0%, transparent 42%),
+      linear-gradient(180deg, transparent 0%, transparent 28%, color-mix(in srgb, #000 78%, transparent) 100%);
+    pointer-events: none;
+  }
+  .sheet-accent-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 30%, transparent) 80%, transparent);
+    box-shadow: 0 -6px 20px color-mix(in srgb, var(--c) 45%, transparent);
+    z-index: 3;
   }
   .sheet-wm {
     position: absolute;
-    right: 8px;
-    top: 4px;
+    right: 6px;
+    top: 2px;
     font-family: var(--hanzi);
-    font-size: 4.5rem;
+    font-size: 5rem;
     font-weight: 600;
     line-height: 1;
-    color: color-mix(in srgb, var(--c) 10%, transparent);
+    color: color-mix(in srgb, #fff 10%, var(--c));
+    opacity: 0.7;
     pointer-events: none;
     user-select: none;
-  }
-  .sheet-meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    position: relative;
     z-index: 1;
   }
-  .sheet-n {
+  .sheet-day-stamp {
+    position: absolute;
+    left: 14px;
+    top: 14px;
+    z-index: 4;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c);
+    letter-spacing: 0.08em;
+    color: #fff;
+    padding: 6px 11px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, #000 50%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   }
   .sheet-today {
-    margin-left: auto;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    z-index: 4;
     font-family: var(--mono);
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;
     background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
-    padding: 4px 10px;
+    padding: 5px 11px;
     border-radius: var(--radius-pill);
-    box-shadow: 0 2px 10px var(--cinabro-glow);
+    box-shadow: 0 4px 14px var(--cinabro-glow);
+  }
+  .sheet-hero {
+    position: relative;
+    z-index: 3;
+    padding: 16px 18px 20px;
+  }
+  .sheet-n {
+    display: block;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 8px;
   }
   .sheet-city {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.9rem;
-    color: var(--ink-body);
-    margin-bottom: 10px;
-    position: relative;
-    z-index: 1;
+    margin-bottom: 8px;
   }
   .city-icon {
-    font-size: 1.15rem;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+    font-size: 1.2rem;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  }
+  .city-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
   }
   .city-hanzi {
     font-family: var(--hanzi);
     font-size: 1.1rem;
-    color: var(--c);
-    margin-left: 2px;
-    text-shadow: 0 0 20px color-mix(in srgb, var(--c) 35%, transparent);
+    color: color-mix(in srgb, #fff 85%, var(--c));
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
   }
   .sheet-title {
     font-family: var(--serif);
-    font-size: 1.62rem;
+    font-size: 1.85rem;
     font-weight: 600;
-    line-height: 1.18;
-    color: var(--ink);
-    letter-spacing: -0.015em;
-    position: relative;
-    z-index: 1;
-    max-width: 85%;
+    line-height: 1.12;
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin: 0;
+    max-width: 95%;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55);
   }
 
   .travel-banner {
     display: flex;
     align-items: flex-start;
     gap: 14px;
-    margin: 0 20px 16px;
+    margin: 16px 18px 0;
     padding: 14px 16px;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--cinabro) 14%, var(--paper-2)) 0%,
-      var(--cinabro-soft) 100%
-    );
-    border: 1px solid rgba(232, 72, 40, 0.28);
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
-    color: var(--ink-body);
-    box-shadow: var(--shadow-sm);
+    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+    backdrop-filter: saturate(1.3) blur(14px);
+    -webkit-backdrop-filter: saturate(1.3) blur(14px);
+    border: 1px solid color-mix(in srgb, var(--cinabro) 28%, var(--line-strong));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     position: relative;
     z-index: 1;
   }
-  .travel-banner b { color: var(--ink); font-weight: 600; }
+  .travel-banner.unconfirmed {
+    border-color: color-mix(in srgb, var(--gold) 40%, var(--line-strong));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--gold) 8%, var(--surface)) 0%, var(--surface) 100%);
+  }
   .tb-ic {
     flex: none;
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     display: grid;
     place-items: center;
-    font-size: 1.2rem;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
+    font-size: 1.25rem;
+    background: color-mix(in srgb, var(--cinabro) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--cinabro) 28%, var(--line));
+    border-radius: 12px;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--cinabro) 15%, transparent);
+  }
+  .tb-body { flex: 1; min-width: 0; }
+  .tb-type {
+    display: block;
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cinabro-bright);
+    margin-bottom: 4px;
+  }
+  .tb-code {
+    display: block;
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .tb-route {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--ink-body);
+    line-height: 1.4;
   }
   .tb-time {
     display: block;
     font-family: var(--mono);
     font-size: 10px;
     color: var(--ink-faint);
-    margin-top: 4px;
-    letter-spacing: 0.02em;
+    margin-top: 6px;
+    letter-spacing: 0.03em;
   }
+  .tb-warn { color: var(--gold); font-weight: 600; }
 
   .plan {
-    padding: 0 20px 18px;
+    padding: 18px 20px;
     position: relative;
     z-index: 1;
   }
@@ -773,14 +1083,18 @@
     display: flex;
     align-items: stretch;
     gap: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     overflow: hidden;
     border: 1px solid var(--line-strong);
-    background: linear-gradient(155deg, var(--paper-2) 0%, var(--surface) 100%);
+    background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
     box-shadow: var(--shadow-sm);
-    transition: border-color 0.15s, transform 0.15s var(--ease);
+    transition: border-color 0.15s, transform 0.15s var(--ease), box-shadow 0.15s;
   }
-  .act-row:active { transform: scale(0.995); }
+  .act-row:active {
+    transform: scale(0.995);
+    border-color: color-mix(in srgb, var(--c) 35%, var(--line-strong));
+    box-shadow: var(--shadow-md);
+  }
   .act-row.done { opacity: 0.68; }
   .act-check-btn {
     flex: none;
@@ -791,9 +1105,9 @@
     background: color-mix(in srgb, var(--c) 5%, var(--surface));
   }
   .act-check {
-    width: 24px;
-    height: 24px;
-    border-radius: 7px;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
     border: 2px solid color-mix(in srgb, var(--c) 70%, var(--line-strong));
     background: color-mix(in srgb, var(--c) 10%, transparent);
     display: grid;
@@ -801,13 +1115,13 @@
     color: #fff;
     font-size: 13px;
     font-weight: 700;
-    transition: background 0.18s, border-color 0.18s, transform 0.15s var(--ease);
+    transition: background 0.18s, border-color 0.18s, transform 0.15s var(--ease), box-shadow 0.18s;
   }
   .act-check.on {
-    background: var(--jade);
+    background: linear-gradient(135deg, var(--jade), #2d8a62);
     border-color: var(--jade);
-    box-shadow: 0 2px 8px var(--jade-soft);
-    transform: scale(1.05);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--jade) 35%, transparent);
+    transform: scale(1.06);
   }
   .act {
     flex: 1;
@@ -834,46 +1148,86 @@
     letter-spacing: 0.01em;
   }
   .act-go {
-    color: var(--c);
-    font-size: 1.25rem;
     flex: none;
-    opacity: 0.85;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    color: var(--c);
+    font-size: 1.15rem;
+    background: color-mix(in srgb, var(--c) 10%, transparent);
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--c) 25%, var(--line));
   }
   .free {
     font-size: 0.92rem;
     color: var(--ink-faint);
     font-style: italic;
-    padding: 10px 14px;
-    background: var(--paper-2);
-    border: 1px dashed var(--line-strong);
-    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    background: linear-gradient(155deg, color-mix(in srgb, var(--c) 5%, var(--paper-2)) 0%, var(--paper-2) 100%);
+    border: 1px dashed color-mix(in srgb, var(--c) 30%, var(--line-strong));
+    border-radius: var(--radius-md);
     text-align: center;
   }
 
   .hotel {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 0 20px 18px;
-    padding: 12px 16px;
-    font-size: 0.88rem;
-    color: var(--ink-body);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
+    gap: 14px;
+    margin: 0 18px 18px;
+    padding: 14px 16px;
+    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--jade) 28%, var(--line-strong));
+    border-radius: var(--radius-md);
     position: relative;
     z-index: 1;
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .hotel-ic {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem;
+    background: color-mix(in srgb, var(--jade) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--jade) 28%, var(--line));
+    border-radius: 12px;
+  }
+  .hotel-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hotel-lbl {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--jade-bright);
+  }
+  .hotel-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.35;
   }
   .hotel-link {
-    margin-left: auto;
+    flex: none;
     font-family: var(--mono);
     font-size: 11px;
     font-weight: 600;
     color: var(--jade-bright);
-    padding: 4px 8px;
+    padding: 7px 12px;
     border-radius: var(--radius-pill);
     background: var(--jade-soft);
     border: 1px solid color-mix(in srgb, var(--jade) 30%, transparent);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--jade) 15%, transparent);
   }
 
   .sheet-foot {
@@ -883,72 +1237,95 @@
     gap: 10px;
     padding: 14px 16px;
     border-top: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--paper-2) 0%, color-mix(in srgb, var(--paper-2) 80%, var(--paper)) 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 4%, var(--paper-2)) 0%, var(--paper-2) 100%);
     position: relative;
     z-index: 1;
   }
   .foot-btn {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: var(--ink-faint);
-    padding: 9px 14px;
-    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    border-radius: var(--radius-pill);
     border: 1px solid var(--line-strong);
     background: var(--surface);
-    transition: transform 0.15s var(--ease), border-color 0.15s, color 0.15s;
+    transition: transform 0.15s var(--ease), border-color 0.15s, color 0.15s, box-shadow 0.15s;
   }
   .foot-btn:active:not(:disabled) { transform: scale(0.97); }
   .foot-btn.primary {
     color: #fff;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--c) 90%, #fff), var(--c));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--c) 92%, #fff), var(--c));
     border-color: var(--c);
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--c) 35%, transparent);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--c) 38%, transparent);
   }
-  .foot-btn:disabled { opacity: 0.32; }
+  .foot-btn:disabled { opacity: 0.3; }
   .foot-count {
     font-family: var(--mono);
     font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-faint);
-    letter-spacing: 0.04em;
+    font-weight: 700;
+    color: var(--c);
+    letter-spacing: 0.06em;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--c) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c) 25%, var(--line));
   }
 
   /* Overview */
   .overview {
-    margin-top: 26px;
+    margin-top: 28px;
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
-    box-shadow: var(--shadow-sm);
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .overview summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 15px 18px;
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--ink-soft);
+    gap: 10px;
+    padding: 16px 18px;
     cursor: pointer;
     list-style: none;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s;
   }
-  .overview summary:active { background: var(--paper-2); color: var(--ink); }
+  .overview summary:active { background: var(--paper-2); }
   .overview summary::-webkit-details-marker { display: none; }
-  .ov-chev {
-    font-size: 0.8rem;
+  .ov-sum-label {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .ov-sum-sub {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     color: var(--ink-faint);
+    text-align: right;
+  }
+  .ov-chev {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    font-size: 1.1rem;
+    color: var(--cinabro-bright);
+    background: color-mix(in srgb, var(--cinabro) 10%, transparent);
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--cinabro) 25%, var(--line));
     transition: transform 0.22s var(--ease);
   }
-  .overview[open] .ov-chev { transform: rotate(180deg); }
+  .overview[open] .ov-chev { transform: rotate(90deg); }
   .ov-list {
     border-top: 1px solid var(--line);
-    max-height: 320px;
+    max-height: 360px;
     overflow-y: auto;
   }
   .ov-row {
@@ -957,27 +1334,36 @@
     gap: 12px;
     width: 100%;
     text-align: left;
-    padding: 13px 18px;
+    padding: 13px 16px;
     border-bottom: 1px solid var(--line);
-    border-left: 3px solid var(--c);
+    border-left: 4px solid color-mix(in srgb, var(--c) 50%, transparent);
     background: transparent;
-    transition: background 0.15s;
+    transition: background 0.15s, border-left-color 0.15s;
   }
-  .ov-row:active { background: color-mix(in srgb, var(--c) 8%, var(--surface)); }
+  .ov-row.on {
+    background: color-mix(in srgb, var(--c) 10%, var(--surface));
+    border-left-color: var(--c);
+  }
+  .ov-row.today:not(.on) {
+    border-left-color: color-mix(in srgb, var(--cinabro) 55%, var(--line));
+  }
+  .ov-row:active { background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
   .ov-row:last-child { border-bottom: none; }
   .ov-n {
-    font-family: var(--serif);
-    font-size: 1.25rem;
+    font-family: var(--mono);
+    font-size: 12px;
     font-weight: 700;
     color: var(--c);
-    width: 30px;
+    width: 28px;
     flex: none;
     line-height: 1;
+    letter-spacing: 0.04em;
   }
   .ov-body { flex: 1; min-width: 0; }
   .ov-title {
     display: block;
-    font-size: 0.9rem;
+    font-family: var(--serif);
+    font-size: 0.92rem;
     font-weight: 600;
     color: var(--ink);
     white-space: nowrap;
@@ -987,20 +1373,27 @@
   }
   .ov-sub {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9px;
     color: var(--ink-faint);
-    margin-top: 2px;
+    margin-top: 3px;
     display: block;
+    letter-spacing: 0.03em;
   }
   .ov-preview {
     flex: none;
-    max-width: 88px;
-    font-size: 0.7rem;
+    max-width: 72px;
+    font-size: 0.68rem;
     color: var(--ink-faint);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: right;
     font-style: italic;
+  }
+  .ov-go {
+    flex: none;
+    color: var(--c);
+    font-size: 1.1rem;
+    opacity: 0.7;
   }
 </style>

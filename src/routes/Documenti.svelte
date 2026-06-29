@@ -942,13 +942,28 @@
   .doc-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 12px 12px 14px;
-    background: linear-gradient(155deg, var(--paper-2) 0%, var(--surface) 100%);
+    gap: 12px;
+    padding: 14px 14px 14px 18px;
+    background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
     border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s var(--ease);
   }
+  .doc-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, var(--jade-bright), var(--jade));
+    box-shadow: 0 0 10px var(--jade-soft);
+  }
+  .doc-row:active { transform: scale(0.99); border-color: color-mix(in srgb, var(--jade) 35%, var(--line-strong)); }
   .doc-icon {
     flex: none;
     width: 40px;

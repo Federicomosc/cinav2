@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { nav, isTab, type Tab } from './lib/router.svelte';
+  import { nav, navMotion, isTab, type Tab } from './lib/router.svelte';
+  import { itinerario, transports, poiById } from './lib/content';
+  import { computeOggi } from './lib/today';
+  import { cityTheme } from './lib/city-theme';
+  import type { CityId } from './data/types';
   import BottomNav from './components/BottomNav.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
   import Oggi from './routes/Oggi.svelte';
@@ -36,15 +40,37 @@
 
   const route = $derived(resolve());
   const Comp = $derived(route.comp);
+
+  const oggiInfo = computeOggi(itinerario, transports);
+  const cityAccent = $derived.by(() => {
+    if (nav.seg === 'citta' && nav.id) return cityTheme(nav.id as CityId).accent;
+    if (nav.seg === 'poi' && nav.id) {
+      const poi = poiById.get(nav.id);
+      if (poi) return cityTheme(poi.city).accent;
+    }
+    if (oggiInfo.leg) return cityTheme(oggiInfo.leg.city).accent;
+    return '#e84828';
+  });
+  const routeMotionClass = $derived(
+    navMotion.dir === 1 ? 'slide-forward' : navMotion.dir === -1 ? 'slide-back' : '',
+  );
 </script>
 
-<div class="app-shell">
-  <div class="app-ambient" aria-hidden="true"></div>
+<div class="app-shell" style="--city-accent: {cityAccent}">
+  <div
+    class="app-ambient"
+    style="--city-accent: {cityAccent}"
+    aria-hidden="true"
+  ></div>
 
-  <main class="screen">
+  <main
+    class="screen"
+    class:screen-tight={route.key === 'oggi'}
+    class:screen-map={route.key === 'mappa'}
+  >
     <OfflineBanner />
     {#key route.key}
-      <div class="route-view">
+      <div class="route-view {routeMotionClass}">
         <Comp />
       </div>
     {/key}

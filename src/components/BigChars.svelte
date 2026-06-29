@@ -60,7 +60,9 @@
     position: fixed;
     inset: 0;
     z-index: 1100;
-    background: rgba(6, 5, 4, 0.96);
+    background: var(--overlay-scrim);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: grid;
     place-items: center;
     padding:
@@ -107,6 +109,11 @@
     background: radial-gradient(circle, var(--cinabro-soft) 0%, transparent 68%);
     pointer-events: none;
     z-index: 0;
+    animation: glowPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
   }
   .content {
     position: relative;

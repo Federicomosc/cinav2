@@ -17,6 +17,8 @@
   import type { CityId } from '../data/types';
   import { cityTheme } from '../lib/city-theme';
   import { theme, toggleNightMode } from '../lib/theme.svelte';
+  import ShortcutIcon from '../components/ShortcutIcon.svelte';
+  import { haptic } from '../lib/haptic';
 
   const info = computeOggi(itinerario, transports);
   const city = $derived(info.leg ? cittaById.get(info.leg.city) : undefined);
@@ -50,7 +52,10 @@
   async function toggleAct(dayN: number, label: string) {
     const id = actId(dayN, label);
     if (checkedActs.has(id)) await db.actChecks.delete(id);
-    else await db.actChecks.put({ id, checkedAt: now() });
+    else {
+      await db.actChecks.put({ id, checkedAt: now() });
+      haptic(10);
+    }
   }
 
   const todayProgress = $derived(
@@ -68,13 +73,15 @@
   );
 
   const shortcuts = [
-    { route: 'frasario' as const, icon: '语', label: 'Frasario', desc: 'Mostra al tassista', hue: 'c' },
-    { route: 'spese' as const, icon: '¥', label: 'Valuta', desc: 'Converti & dividi', hue: 'g' },
-    { route: 'emergenze' as const, icon: '✚', label: 'Salute', desc: 'Numeri SOS', hue: 'j' },
-    { route: 'mappa' as const, icon: '◎', label: 'Mappa', desc: 'POI & GPS', hue: 'b' },
-    { route: 'documenti' as const, icon: '🔒', label: 'Documenti', desc: 'Cassaforte', hue: 'p' },
-    { route: 'logistica' as const, icon: '✈', label: 'Viaggio', desc: 'Timeline 20 gg', hue: 'r' },
+    { route: 'frasario' as const, label: 'Frasario', desc: 'Mostra al tassista', hue: 'c' },
+    { route: 'spese' as const, label: 'Valuta', desc: 'Converti & dividi', hue: 'g' },
+    { route: 'emergenze' as const, label: 'Salute', desc: 'Numeri SOS', hue: 'j' },
+    { route: 'mappa' as const, label: 'Mappa', desc: 'POI & GPS', hue: 'b' },
+    { route: 'documenti' as const, label: 'Documenti', desc: 'Cassaforte', hue: 'p' },
+    { route: 'logistica' as const, label: 'Viaggio', desc: 'Timeline 20 gg', hue: 'r' },
   ];
+
+  const hasStayTonight = $derived(info.phase === 'during' && !!alloggio);
 
   function legIndex(cityId: CityId): number {
     return itinerario.legs.findIndex((l) => l.city === cityId) + 1;
@@ -83,10 +90,8 @@
 
 <div class="oggi" style={info.phase === 'during' ? `--accent:${accent}` : undefined}>
   {#if info.phase === 'before'}
-    <!-- Pre-partenza: un solo blocco hero compatto -->
     <header class="pre-launch card">
       <div class="pre-accent" aria-hidden="true"></div>
-      <span class="pre-wm" aria-hidden="true">行</span>
       <div class="pre-inner">
         <div class="pre-meta">
           <time class="pre-today" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
@@ -105,47 +110,52 @@
           </div>
         </div>
 
-        <div class="pre-count-wrap">
-          <div class="pre-ring" aria-hidden="true">
-            <svg viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle
-                class="ring-fg"
-                cx="60"
-                cy="60"
-                r="52"
-                style="stroke-dasharray: {326}; stroke-dashoffset: {326 - (326 * Math.min(info.daysToStart, 30)) / 30}"
-              />
-            </svg>
+        <div class="pre-hero-row">
+          <div class="pre-count-wrap">
+            <div class="pre-ring" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="52" />
+                <circle
+                  class="ring-fg"
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  style="stroke-dasharray: 326; stroke-dashoffset: {326 - (326 * Math.min(info.daysToStart, 30)) / 30}"
+                />
+              </svg>
+            </div>
+            <div class="pre-count">
+              <span class="pre-num">{info.daysToStart}</span>
+              <span class="pre-unit">giorni alla partenza</span>
+            </div>
           </div>
-          <div class="pre-count">
-            <span class="pre-num">{info.daysToStart}</span>
-            <span class="pre-unit">giorni alla partenza</span>
+
+          <div class="pre-col">
+            <p class="pre-depart">
+              <span class="pre-depart-ic" aria-hidden="true">✈</span>
+              Partenza {shortDate(itinerario.trip.start)}
+            </p>
+            <div class="pre-actions">
+              <button type="button" class="pre-cta primary" onclick={() => go('documenti')}>Documenti</button>
+              <button type="button" class="pre-cta ghost" onclick={() => go('logistica')}>Itinerario</button>
+            </div>
           </div>
-        </div>
-
-        <p class="pre-depart">
-          <span class="pre-depart-ic" aria-hidden="true">✈</span>
-          {longDate(itinerario.trip.start)}
-        </p>
-
-        <div class="pre-actions">
-          <button class="pre-cta primary" onclick={() => go('documenti')}>Documenti</button>
-          <button class="pre-cta ghost" onclick={() => go('logistica')}>Itinerario 20 gg</button>
         </div>
       </div>
     </header>
   {:else}
-    <header class="mast-panel">
-      <div class="mast-deco" aria-hidden="true">
-        <span class="mast-line"></span>
-        <span class="mast-seal">今</span>
-        <span class="mast-line"></span>
-      </div>
+    <header class="mast-panel mast-compact">
       <div class="mast-top">
         <div class="mast-titles">
-          <p class="eyebrow">Dashboard</p>
           <h1 class="mast-h1">Oggi</h1>
+          {#if info.phase === 'during'}
+            <span class="trip-badge live mast-inline-badge">
+              <span class="live-dot" aria-hidden="true"></span>
+              Giorno {tripDay}/{tripTotalDays}
+            </span>
+          {:else}
+            <span class="trip-badge muted-badge mast-inline-badge">Viaggio concluso</span>
+          {/if}
         </div>
         <div class="mast-actions">
           <button
@@ -158,23 +168,12 @@
           >
             <span class="night-ic" aria-hidden="true">{theme.nightMode ? '🌙' : '☀️'}</span>
           </button>
-          <time class="date-pill" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
+          <time class="date-pill" datetime={info.todayIso}>{shortDate(info.todayIso)}</time>
         </div>
       </div>
-      <div class="mast-foot">
-        {#if info.phase === 'during'}
-          <span class="trip-badge live">
-            <span class="live-dot" aria-hidden="true"></span>
-            Giorno {tripDay} di {tripTotalDays}
-          </span>
-        {:else}
-          <span class="trip-badge muted-badge">Viaggio concluso</span>
-        {/if}
-      </div>
     </header>
-  {/if}
 
-  {#if info.phase !== 'before' && info.phase !== 'after'}
+  {#if info.phase === 'during'}
     <div class="progress-block" aria-label="Avanzamento viaggio: {tripPct}%">
       <div class="progress-head">
         <span class="progress-label">Avanzamento viaggio</span>
@@ -216,9 +215,6 @@
           {city.name}
           <span class="cn">{city.nameLocal}</span>
         </h1>
-        <div class="intro-wrap">
-          <p class="city-intro prose-lead">{city.intro}</p>
-        </div>
         <div class="hero-stats">
           <span class="stat-chip">{poisOfCity(city.id).length} POI</span>
           {#if bookings.length}<span class="stat-chip warn">{bookings.length} da prenotare</span>{/if}
@@ -297,43 +293,10 @@
     </section>
   {/if}
 
-  <!-- ── Alloggio ──────────────────────────────────────────────────── -->
-  {#if alloggio && info.phase === 'during'}
-    <section class="block">
-      <div class="block-head">
-        <h2 class="block-title">Dove dormiamo</h2>
-        {#if !alloggio.confirmed}<span class="block-when">Da confermare</span>{/if}
-      </div>
-      <div class="card stay-card accent-card">
-        <div class="stay-top">
-          <span class="stay-icon" aria-hidden="true">🏨</span>
-          <div class="stay-info">
-            <b>{alloggio.name}</b>
-            {#if alloggio.address}<p class="stay-addr">{alloggio.address}</p>{/if}
-          </div>
-        </div>
-        <div class="stay-dates">
-          <span>Check-in {shortDate(alloggio.checkIn)}</span>
-          <span class="sep">→</span>
-          <span>Check-out {shortDate(alloggio.checkOut)}</span>
-        </div>
-        {#if alloggio.addressLocal}
-          <button
-            class="stay-zh"
-            onclick={() => go('frasario')}
-            title="Apri nel frasario"
-          >
-            <span class="zh">{alloggio.addressLocal}</span>
-            <span class="zh-hint">Mostra al tassista ›</span>
-          </button>
-        {/if}
-      </div>
-    </section>
   {/if}
 
-  <!-- ── Prossimo spostamento ──────────────────────────────────────── -->
   {#if nt}
-    <section class="block">
+    <section class="block block-tight">
       <div class="block-head">
         <h2 class="block-title">Prossimo spostamento</h2>
         {#if info.daysToNextTransport !== undefined}
@@ -342,12 +305,16 @@
           </span>
         {/if}
       </div>
-      <button class="card transport-card accent-card card-interactive" onclick={() => go('logistica')}>
-        <div class="transport-icon" aria-hidden="true">{typeIcon[nt.type] ?? '→'}</div>
+      <button
+        type="button"
+        class="card transport-card accent-card card-interactive"
+        onclick={() => go('logistica')}
+      >
+        <span class="transport-icon" aria-hidden="true">{typeIcon[nt.type] ?? '→'}</span>
         <div class="transport-body">
           <div class="transport-route">
             <span class="tag-pill">{typeLabel[nt.type]}</span>
-            <b>{nt.from} → {nt.to}</b>
+            <span class="transport-dest">{nt.from} → {nt.to}</span>
           </div>
           <div class="transport-meta">
             <span>{nt.code}</span>
@@ -359,6 +326,41 @@
         </div>
         <span class="transport-chev" aria-hidden="true">›</span>
       </button>
+    </section>
+  {/if}
+
+  <!-- ── Dove dormiamo (solo in viaggio) ───────────────────────────── -->
+  {#if hasStayTonight}
+    <section class="block">
+      <div class="block-head">
+        <h2 class="block-title">Dove dormiamo</h2>
+        {#if !alloggio!.confirmed}<span class="block-when">Da confermare</span>{/if}
+      </div>
+      <div class="card stay-card accent-card">
+        <div class="stay-top">
+          <span class="stay-icon" aria-hidden="true">🏨</span>
+          <div class="stay-info">
+            <b>{alloggio!.name}</b>
+            {#if alloggio!.address}<p class="stay-addr">{alloggio!.address}</p>{/if}
+          </div>
+        </div>
+        <div class="stay-dates">
+          <span>Check-in {shortDate(alloggio!.checkIn)}</span>
+          <span class="sep">→</span>
+          <span>Check-out {shortDate(alloggio!.checkOut)}</span>
+        </div>
+        {#if alloggio!.addressLocal}
+          <button
+            type="button"
+            class="stay-zh"
+            onclick={() => go('frasario')}
+            title="Apri nel frasario"
+          >
+            <span class="zh">{alloggio!.addressLocal}</span>
+            <span class="zh-hint">Mostra al tassista ›</span>
+          </button>
+        {/if}
+      </div>
     </section>
   {/if}
 
@@ -384,15 +386,16 @@
     </section>
   {/if}
 
-  <!-- ── Strumenti rapidi ──────────────────────────────────────────── -->
   <section class="block tools-block">
     <div class="block-head">
       <h2 class="block-title">Strumenti</h2>
     </div>
     <div class="tools-grid">
       {#each shortcuts as s (s.route)}
-        <button class="tool hue-{s.hue}" onclick={() => go(s.route)}>
-          <span class="tool-icon">{s.icon}</span>
+        <button class="tool hue-{s.hue} pressable" onclick={() => go(s.route)}>
+          <span class="tool-icon">
+            <ShortcutIcon id={s.route} size={19} />
+          </span>
           <span class="tool-label">{s.label}</span>
           <span class="tool-desc">{s.desc}</span>
         </button>
@@ -406,13 +409,171 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
+  }
+  /* ── Pre-partenza ── */
+  .pre-launch {
+    position: relative;
+    margin-bottom: 14px;
+    padding: 0;
+    overflow: hidden;
+    background: linear-gradient(
+      168deg,
+      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
+      var(--surface) 45%,
+      color-mix(in srgb, var(--surface) 94%, var(--paper)) 100%
+    );
+    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
+    box-shadow: var(--shadow-md), 0 0 40px rgba(232, 72, 40, 0.1);
+    animation: rise 0.45s var(--ease) both;
+  }
+  .pre-accent {
+    height: 4px;
+    background: linear-gradient(90deg, var(--cinabro-bright), var(--gold), color-mix(in srgb, var(--cinabro) 20%, transparent));
+    box-shadow: 0 2px 14px var(--cinabro-glow);
+  }
+  .pre-inner {
+    position: relative;
+    z-index: 1;
+    padding: 14px 16px 16px;
+  }
+  .pre-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .pre-today {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-body);
+  }
+  .pre-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cinabro-bright);
+    background: var(--cinabro-soft);
+    border: 1px solid rgba(232, 72, 40, 0.28);
+    border-radius: var(--radius-pill);
+    padding: 4px 10px;
+  }
+  .pre-hero-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .pre-count-wrap {
+    position: relative;
+    flex: none;
+    width: 112px;
+    height: 112px;
+  }
+  .pre-ring {
+    position: absolute;
+    inset: 0;
+  }
+  .pre-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    filter: drop-shadow(0 4px 14px rgba(232, 72, 40, 0.25));
+  }
+  .ring-bg { fill: none; stroke: var(--line-strong); stroke-width: 4; }
+  .ring-fg {
+    fill: none;
+    stroke: var(--cinabro-bright);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  .pre-count {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .pre-num {
+    font-family: var(--serif);
+    font-size: 2.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    background: linear-gradient(180deg, var(--ink) 30%, var(--cinabro-bright) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .pre-unit {
+    font-family: var(--mono);
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    max-width: 72px;
+    line-height: 1.35;
+    text-align: center;
+  }
+  .pre-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pre-depart {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .pre-depart-ic { font-size: 0.95rem; line-height: 1; }
+  .pre-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .pre-cta {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    flex: 1;
+    min-width: 0;
+    transition: transform 0.15s var(--ease);
+  }
+  .pre-cta:active { transform: scale(0.97); }
+  .pre-cta.primary {
+    color: #fff;
+    background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
+    border: 1px solid rgba(232, 72, 40, 0.4);
+    box-shadow: 0 4px 14px var(--cinabro-glow);
+  }
+  .pre-cta.ghost {
+    color: var(--ink-soft);
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
   }
 
   /* ── Masthead panel ── */
   .mast-panel {
-    margin-bottom: 18px;
-    padding: 16px 18px 18px;
+    margin-bottom: 14px;
+    padding: 12px 16px 14px;
     background: linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 55%, color-mix(in srgb, var(--surface) 92%, var(--paper)) 100%);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-lg);
@@ -485,8 +646,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     flex: none;
     border-radius: var(--radius-sm);
     border: 1px solid var(--line-strong);
@@ -502,12 +663,25 @@
   .night-toggle:active { transform: scale(0.94); }
   .night-ic { font-size: 1.05rem; line-height: 1; }
   .mast-titles { min-width: 0; }
+  .mast-compact {
+    border-radius: var(--radius-md);
+  }
+  .mast-compact .mast-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mast-inline-badge {
+    align-self: flex-start;
+    padding: 3px 9px;
+    font-size: 9px;
+  }
   .mast-h1 {
     font-family: var(--serif);
-    font-size: 2.35rem;
-    line-height: 1.02;
+    font-size: 2.05rem;
+    line-height: 1.05;
     letter-spacing: -0.025em;
-    margin: 2px 0 0;
+    margin: 0;
     background: linear-gradient(135deg, var(--ink) 0%, var(--ink-soft) 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -524,8 +698,8 @@
     text-transform: uppercase;
     color: var(--ink-body);
     text-align: right;
-    line-height: 1.5;
-    padding: 8px 11px;
+    line-height: 1.45;
+    padding: 6px 10px;
     background: var(--paper-2);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-sm);
@@ -573,8 +747,8 @@
 
   /* ── Progress ── */
   .progress-block {
-    margin-bottom: 22px;
-    padding: 15px 17px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
     background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
@@ -584,7 +758,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .progress-label {
     font-family: var(--mono);
@@ -601,19 +775,22 @@
     color: var(--accent, var(--cinabro-bright));
   }
   .progress-track {
-    height: 6px;
-    background: var(--paper-2);
+    height: 3px;
     border-radius: var(--radius-pill);
+    background: var(--line);
     overflow: hidden;
-    border: 1px solid var(--line);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
   }
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent, var(--cinabro)), color-mix(in srgb, var(--accent, var(--jade)) 50%, var(--jade-bright)));
     border-radius: inherit;
-    transition: width 0.7s var(--ease);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--accent, var(--cinabro)) 45%, transparent);
+    background: linear-gradient(
+      90deg,
+      var(--accent, var(--cinabro)),
+      color-mix(in srgb, var(--accent, var(--cinabro-bright)) 70%, var(--gold))
+    );
+    transition: width 0.5s var(--ease);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent, var(--cinabro)) 45%, transparent);
     position: relative;
   }
   .progress-fill::after {
@@ -627,7 +804,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 9px;
+    margin-top: 5px;
     font-family: var(--mono);
     font-size: 9px;
     color: var(--ink-faint);
@@ -641,7 +818,7 @@
 
   /* ── Hero variants ── */
   .hero {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-md);
@@ -663,173 +840,6 @@
     transition: transform 0.15s var(--ease);
   }
   .cta-btn:active { transform: scale(0.97); }
-
-  /* Pre-partenza — hero unificato */
-  .pre-launch {
-    position: relative;
-    margin-bottom: 24px;
-    padding: 0;
-    overflow: hidden;
-    background: linear-gradient(
-      168deg,
-      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
-      var(--surface) 45%,
-      color-mix(in srgb, var(--surface) 94%, var(--paper)) 100%
-    );
-    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
-    box-shadow: var(--shadow-md), 0 0 40px rgba(232, 72, 40, 0.1);
-    animation: rise 0.45s var(--ease) both;
-  }
-  .pre-accent {
-    height: 4px;
-    background: linear-gradient(90deg, var(--cinabro-bright), var(--gold), color-mix(in srgb, var(--cinabro) 20%, transparent));
-    box-shadow: 0 2px 14px var(--cinabro-glow);
-  }
-  .pre-wm {
-    position: absolute;
-    right: 4px;
-    top: 28px;
-    font-family: var(--hanzi);
-    font-size: 5.5rem;
-    font-weight: 600;
-    line-height: 1;
-    color: color-mix(in srgb, var(--cinabro) 9%, transparent);
-    pointer-events: none;
-    user-select: none;
-  }
-  .pre-inner {
-    position: relative;
-    z-index: 1;
-    padding: 18px 20px 22px;
-    text-align: center;
-  }
-  .pre-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .pre-today {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-body);
-  }
-  .pre-tag {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-    border: 1px solid rgba(232, 72, 40, 0.28);
-    border-radius: var(--radius-pill);
-    padding: 4px 10px;
-  }
-  .pre-count-wrap {
-    position: relative;
-    width: 148px;
-    height: 148px;
-    margin: 0 auto 18px;
-  }
-  .pre-ring {
-    position: absolute;
-    inset: 0;
-  }
-  .pre-ring svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-    filter: drop-shadow(0 4px 14px rgba(232, 72, 40, 0.25));
-  }
-  .ring-bg { fill: none; stroke: var(--line-strong); stroke-width: 4; }
-  .ring-fg {
-    fill: none;
-    stroke: var(--cinabro-bright);
-    stroke-width: 4;
-    stroke-linecap: round;
-  }
-  .pre-count {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-  }
-  .pre-num {
-    font-family: var(--serif);
-    font-size: 3.4rem;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.03em;
-    color: var(--ink);
-    background: linear-gradient(180deg, var(--ink) 30%, var(--cinabro-bright) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .pre-unit {
-    font-family: var(--mono);
-    font-size: 8px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    max-width: 80px;
-    line-height: 1.35;
-  }
-  .pre-depart {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--ink-soft);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-pill);
-    padding: 8px 16px;
-    margin-bottom: 10px;
-  }
-  .pre-depart-ic { font-size: 0.95rem; line-height: 1; }
-  .pre-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-  }
-  .pre-cta {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    border-radius: var(--radius-sm);
-    padding: 12px 16px;
-    transition: transform 0.15s var(--ease);
-  }
-  .pre-cta:active { transform: scale(0.97); }
-  .pre-cta.primary {
-    flex: 1;
-    max-width: 160px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
-    border: 1px solid rgba(232, 72, 40, 0.4);
-    box-shadow: 0 4px 14px var(--cinabro-glow);
-  }
-  .pre-cta.ghost {
-    flex: 1;
-    max-width: 140px;
-    color: var(--ink-soft);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-  }
 
   /* Done */
   .hero-done {
@@ -878,9 +888,9 @@
   .hero-wm {
     position: absolute;
     right: 6px;
-    top: 16px;
+    top: 8px;
     font-family: var(--hanzi);
-    font-size: 4rem;
+    font-size: 3.2rem;
     font-weight: 600;
     line-height: 1;
     color: color-mix(in srgb, var(--accent) 11%, transparent);
@@ -899,7 +909,7 @@
     box-shadow: 0 2px 16px color-mix(in srgb, var(--accent) 40%, transparent);
   }
   .hero-body {
-    padding: 22px 20px 24px;
+    padding: 16px 18px 18px;
     position: relative;
     z-index: 1;
   }
@@ -907,8 +917,8 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 6px;
   }
   .city-emoji {
     font-size: 1.15rem;
@@ -934,19 +944,19 @@
   }
   .city-name {
     font-family: var(--serif);
-    font-size: 2.05rem;
+    font-size: 1.85rem;
     line-height: 1.1;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     letter-spacing: -0.015em;
     max-width: 82%;
   }
   .city-name .cn {
     display: block;
     font-family: var(--hanzi);
-    font-size: 1.7rem;
+    font-size: 1.45rem;
     font-weight: 500;
     color: var(--accent);
-    margin-top: 5px;
+    margin-top: 2px;
     text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 38%, transparent);
   }
   .intro-wrap {
@@ -977,8 +987,8 @@
   .hero-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 6px;
+    margin-bottom: 0;
   }
   .stat-chip {
     font-family: var(--mono);
@@ -1001,16 +1011,16 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 8px;
+    margin-top: 12px;
   }
   .hero-cta {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.03em;
     border-radius: var(--radius-sm);
-    padding: 11px 18px;
+    padding: 10px 16px;
     transition: transform 0.15s var(--ease), box-shadow 0.15s;
   }
   .hero-cta:active { transform: scale(0.97); }
@@ -1031,18 +1041,19 @@
   }
 
   /* ── Blocks ── */
-  .block { margin-bottom: 24px; }
+  .block { margin-bottom: 14px; }
+  .block-tight { margin-bottom: 12px; }
   .block-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 11px;
+    gap: 8px;
+    margin-bottom: 8px;
     padding-left: 2px;
   }
   .block-title {
     font-family: var(--serif);
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--ink);
     display: flex;
@@ -1091,25 +1102,25 @@
     box-shadow: var(--shadow-md), 0 0 32px color-mix(in srgb, var(--accent, var(--cinabro)) 8%, transparent);
   }
   .program-head {
-    padding: 14px 18px 12px;
+    padding: 10px 14px 8px;
     border-bottom: 1px solid var(--line);
     background: linear-gradient(160deg, color-mix(in srgb, var(--accent, var(--surface-hi)) 8%, var(--surface-hi)) 0%, var(--surface) 100%);
   }
   .program-day-title {
     display: block;
     font-family: var(--serif);
-    font-size: 1.12rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--ink);
     letter-spacing: -0.01em;
     line-height: 1.25;
   }
   .program-card .program-bar {
-    margin: 14px 18px 0;
+    margin: 10px 14px 0;
   }
   .program-card .acts,
   .program-card .program-empty {
-    margin: 14px 18px 0;
+    margin: 10px 14px 0;
   }
   .program-bar-fill.complete {
     background: linear-gradient(90deg, var(--jade), var(--jade-bright));
@@ -1143,7 +1154,7 @@
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 6px;
     position: relative;
   }
   .acts.timeline::before {
@@ -1180,7 +1191,7 @@
     flex: none;
     display: grid;
     place-items: center;
-    width: 50px;
+    width: 42px;
     border-right: 1px solid var(--line);
     background: color-mix(in srgb, var(--accent, var(--jade)) 6%, var(--surface));
   }
@@ -1201,23 +1212,30 @@
     background: var(--jade);
     border-color: var(--jade);
     box-shadow: 0 2px 8px var(--jade-soft);
-    transform: scale(1.05);
+    animation: checkPop 0.28s var(--ease) both;
+  }
+  @keyframes checkPop {
+    0% { transform: scale(0.7); }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1.05); }
   }
   .act {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     text-align: left;
-    padding: 13px 14px 13px 4px;
+    padding: 10px 12px 10px 2px;
     border: none;
     background: transparent;
   }
   .act-poi:active { background: color-mix(in srgb, var(--accent, var(--cinabro)) 8%, var(--paper-2)); }
   .act-row.done .act-label {
     text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--jade) 50%, transparent);
     color: var(--ink-faint);
+    transition: color 0.25s, text-decoration-color 0.25s;
   }
   .act-num {
     flex: none;
@@ -1250,8 +1268,8 @@
   .program-link {
     display: block;
     width: 100%;
-    margin-top: 14px;
-    padding: 13px 18px;
+    margin-top: 10px;
+    padding: 10px 14px;
     border-top: 1px solid var(--line);
     font-family: var(--mono);
     font-size: 11px;
@@ -1266,7 +1284,72 @@
     background: color-mix(in srgb, var(--accent, var(--cinabro)) 8%, var(--paper-2));
   }
 
-  /* Accent cards (stay, transport) */
+  .sep { opacity: 0.35; }
+
+  /* Transport */
+  button.transport-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    padding: 16px 18px 16px 22px;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
+      var(--surface) 100%
+    );
+    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .transport-card.accent-card::before {
+    background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
+    box-shadow: 0 0 10px var(--cinabro-glow);
+  }
+  .transport-icon {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    font-size: 1.35rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    line-height: 1;
+  }
+  .transport-body { flex: 1; min-width: 0; }
+  .transport-route {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.96rem;
+  }
+  .transport-dest {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .transport-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin-top: 7px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+  .transport-chev {
+    color: var(--cinabro-bright);
+    font-size: 1.4rem;
+    flex: none;
+    opacity: 0.8;
+  }
+
+  /* Stay */
   .accent-card {
     position: relative;
     overflow: hidden;
@@ -1282,14 +1365,8 @@
     background: linear-gradient(180deg, var(--accent, var(--jade-bright)), color-mix(in srgb, var(--accent, var(--jade)) 50%, transparent));
     box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--jade)) 30%, transparent);
   }
-  .transport-card.accent-card::before {
-    background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
-    box-shadow: 0 0 10px var(--cinabro-glow);
-  }
-
-  /* Stay */
   .stay-card {
-    padding: 18px 20px 18px 22px;
+    padding: 12px 14px 12px 18px;
     background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
   }
   .stay-top { display: flex; align-items: flex-start; gap: 14px; }
@@ -1330,7 +1407,6 @@
     color: var(--ink-faint);
     letter-spacing: 0.02em;
   }
-  .sep { opacity: 0.35; }
   .stay-zh {
     display: flex;
     align-items: center;
@@ -1362,53 +1438,6 @@
     white-space: nowrap;
   }
 
-  /* Transport */
-  .transport-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    text-align: left;
-    padding: 16px 18px 16px 22px;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
-      var(--surface) 100%
-    );
-    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
-  }
-  .transport-icon {
-    flex: none;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    font-size: 1.35rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--line-strong);
-    border-radius: 12px;
-    line-height: 1;
-  }
-  .transport-body { flex: 1; min-width: 0; }
-  .transport-route {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 0.96rem;
-  }
-  .transport-route b { color: var(--ink); font-weight: 600; }
-  .transport-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;
-    margin-top: 7px;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--ink-faint);
-    letter-spacing: 0.02em;
-  }
   .warn-tag {
     color: var(--gold);
     font-weight: 700;
@@ -1418,12 +1447,6 @@
     background: var(--gold-soft);
     padding: 2px 6px;
     border-radius: 4px;
-  }
-  .transport-chev {
-    color: var(--cinabro-bright);
-    font-size: 1.4rem;
-    flex: none;
-    opacity: 0.8;
   }
 
   /* Bookings */
@@ -1474,7 +1497,7 @@
   .tools-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
   }
   .tool {
     display: flex;
@@ -1482,7 +1505,7 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    padding: 15px 8px 13px;
+    padding: 12px 6px 11px;
     min-height: 0;
     background: linear-gradient(165deg, var(--surface-hi) 0%, var(--surface) 55%, color-mix(in srgb, var(--surface) 90%, var(--paper)) 100%);
     border: 1px solid var(--line-strong);
@@ -1509,16 +1532,17 @@
     box-shadow: var(--shadow-md);
   }
   .tool-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     display: grid;
     place-items: center;
-    border-radius: 11px;
-    font-size: 1.2rem;
-    line-height: 1;
-    font-family: var(--hanzi);
-    margin-bottom: 2px;
+    border-radius: 10px;
+    margin-bottom: 0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .tool-icon :global(svg) {
+    display: block;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
   }
   .hue-c .tool-icon { background: var(--cinabro-soft); color: var(--cinabro-bright); }
   .hue-g .tool-icon { background: var(--gold-soft); color: var(--gold); }
@@ -1528,15 +1552,16 @@
   .hue-r .tool-icon { background: rgba(224, 82, 82, 0.14); color: #e87070; }
   .tool-label {
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     color: var(--ink);
     text-align: center;
     letter-spacing: 0.01em;
+    line-height: 1.2;
   }
   .tool-desc {
-    font-size: 0.67rem;
+    font-size: 0.62rem;
     color: var(--ink-faint);
-    line-height: 1.3;
+    line-height: 1.25;
     text-align: center;
   }
 

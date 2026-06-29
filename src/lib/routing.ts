@@ -1,6 +1,7 @@
 // Percorsi pedonali: tile OpenMapTiles (offline) → OSRM online → linea d'aria.
 
 import { route } from 'omt-router';
+import { buildStepsFromCoordinates } from './nav-guidance';
 
 const REMOTE_TILE_JSON = 'https://tiles.openfreemap.org/planet';
 const LOCAL_TILEJSON = '/tiles/routing/tilejson.json';
@@ -76,11 +77,13 @@ function walkDurationS(distanceM: number): number {
 
 function straightLinePlan(from: [number, number], to: [number, number]): NavPlan {
   const distanceM = haversineM(from[1], from[0], to[1], to[0]);
+  const coordinates: [number, number][] = [from, to];
   return {
-    coordinates: [from, to],
+    coordinates,
     distanceM,
     durationS: walkDurationS(distanceM),
     fallback: true,
+    steps: buildStepsFromCoordinates(coordinates),
   };
 }
 
@@ -215,33 +218,43 @@ async function planOmtFootRoute(
   const isLocal = template.startsWith('/');
   const distM = haversineM(from[1], from[0], to[1], to[0]);
 
-  try {
-    const result = await route(from, to, 'pedestrian', template, {
-      costField: 'distance',
-      signal,
-      maxAcceptableSnapDistanceM: 280,
-      maxAutoRadius: autoRadiusM(distM),
-      engineId: 'bidirectional-astar',
-    });
+  const attempts: { snap: number; radius: number }[] = [
+    { snap: 280, radius: autoRadiusM(distM) },
+    { snap: 420, radius: Math.min(48, autoRadiusM(distM) + 12) },
+    { snap: 600, radius: Math.min(56, autoRadiusM(distM) + 20) },
+  ];
 
-    if (result.found && result.coordinates.length > 2) {
-      const distanceM = pathDistanceM(result.coordinates);
-      const durationS = walkDurationS(distanceM);
-      return {
-        coordinates: result.coordinates,
-        distanceM,
-        durationS,
-        fallback: !isLocal || !!result.partialGraph || !!result.hasMissingTiles,
-      };
+  for (const { snap, radius } of attempts) {
+    try {
+      const result = await route(from, to, 'pedestrian', template, {
+        costField: 'distance',
+        signal,
+        maxAcceptableSnapDistanceM: snap,
+        maxAutoRadius: radius,
+        engineId: 'bidirectional-astar',
+      });
+
+      if (result.found && result.coordinates.length > 2) {
+        const distanceM = pathDistanceM(result.coordinates);
+        const durationS = walkDurationS(distanceM);
+        const steps = buildStepsFromCoordinates(result.coordinates);
+        return {
+          coordinates: result.coordinates,
+          distanceM,
+          durationS,
+          fallback: !isLocal || !!result.partialGraph || !!result.hasMissingTiles,
+          steps,
+        };
+      }
+    } catch {
+      /* tile mancanti — prova parametri più permissivi */
     }
-  } catch {
-    /* tile mancanti */
   }
 
   return null;
 }
 
-/** Percorso pedonale da [lng,lat] a [lng,lat]. */
+/** Percorso pedonale da [lng,lat] a [lng,lat]. Preferisce tile locali (offline). */
 export async function planPedestrianRoute(
   from: [number, number],
   to: [number, number],
@@ -250,8 +263,11 @@ export async function planPedestrianRoute(
   const omt = await planOmtFootRoute(from, to, signal);
   if (omt && !isStraightLine(omt.coordinates)) return omt;
 
-  const osrm = await planOsrmFootRoute(from, to, signal);
-  if (osrm) return osrm;
+  const online = typeof navigator === 'undefined' || navigator.onLine;
+  if (online) {
+    const osrm = await planOsrmFootRoute(from, to, signal);
+    if (osrm) return osrm;
+  }
 
   if (omt) return omt;
   return straightLinePlan(from, to);

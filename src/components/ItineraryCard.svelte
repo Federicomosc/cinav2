@@ -87,17 +87,23 @@
     border-radius: var(--radius-md);
     overflow: hidden;
     background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
-    border: 1px solid var(--line-strong);
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line-strong));
+    box-shadow:
+      var(--shadow-sm),
+      0 8px 24px color-mix(in srgb, var(--accent) 8%, transparent);
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s;
   }
   .itin-card:active {
     transform: scale(0.985);
-    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
+    box-shadow:
+      var(--shadow-md),
+      0 12px 32px color-mix(in srgb, var(--accent) 14%, transparent);
   }
   .itin-accent {
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent) 80%, transparent);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent);
   }
   .itin-inner { padding: 16px 16px 14px; }
   .itin-head {

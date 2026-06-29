@@ -1,5 +1,6 @@
 <script lang="ts">
   import { nav, go, isTab, type Tab } from '../lib/router.svelte';
+  import { haptic } from '../lib/haptic';
 
   const items: { route: Tab; label: string }[] = [
     { route: 'oggi', label: 'Oggi' },
@@ -39,7 +40,7 @@
         class="item"
         class:active={activeTab === item.route}
         aria-current={activeTab === item.route ? 'page' : undefined}
-        onclick={() => go(item.route)}
+        onclick={() => { haptic(8); go(item.route); }}
       >
         <span class="ic" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
@@ -82,7 +83,7 @@
     box-shadow:
       var(--shadow-lg),
       inset 0 1px 0 var(--nav-shell-inset),
-      0 -8px 32px rgba(232, 72, 40, 0.06);
+      0 -8px 32px color-mix(in srgb, var(--city-accent, var(--cinabro)) 10%, transparent);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -101,7 +102,7 @@
     color: var(--ink-faint);
     transition: color 0.2s var(--ease);
   }
-  .item.active { color: var(--cinabro-bright); }
+  .item.active { color: var(--city-accent, var(--cinabro-bright)); }
   .ic {
     position: relative;
     display: grid;
@@ -120,8 +121,8 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: var(--cinabro-soft);
-    box-shadow: 0 0 14px var(--cinabro-glow);
+    background: color-mix(in srgb, var(--city-accent, var(--cinabro)) 14%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--city-accent, var(--cinabro)) 35%, transparent);
   }
   .item.active .ic :global(svg) {
     position: relative;
@@ -138,10 +139,10 @@
   .dot {
     position: absolute;
     bottom: 6px;
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: var(--cinabro);
-    box-shadow: 0 0 8px var(--cinabro-glow);
+    background: var(--city-accent, var(--cinabro));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--city-accent, var(--cinabro)) 50%, transparent);
   }
 </style>

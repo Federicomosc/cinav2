@@ -34,16 +34,19 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: -4px -4px 10px;
-    padding: 9px 14px;
-    background: rgba(20, 16, 12, 0.95);
-    border: 1px solid rgba(232, 72, 40, 0.4);
-    border-radius: var(--radius-sm);
+    margin: -4px -4px 12px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+    border: 1px solid color-mix(in srgb, var(--cinabro) 40%, var(--line-strong));
+    border-radius: var(--radius-md);
     font-size: 0.78rem;
     line-height: 1.4;
     color: var(--ink-soft);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(232, 72, 40, 0.1);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    box-shadow:
+      var(--shadow-sm),
+      0 0 24px color-mix(in srgb, var(--cinabro) 12%, transparent);
   }
   .ic { font-size: 14px; flex: none; }
   .txt strong { color: var(--cinabro-bright); font-weight: 600; }
