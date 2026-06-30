@@ -228,7 +228,23 @@ DocItem (cifrato), Meta (tasso CNY, profilo membri). Riusare le interfacce di `c
 - [x] **Convertitore CNY** (1.f): tasso pre-caricato, conversione bidirezionale offline. *Verificato.*
 - [x] **Emergenze & contatti** (1.g): numeri cinesi + rete consolare IT (da confermare) + **schede
       mediche personali** per membro (editabili, persistenti, etichette bilingui IT/汉字). *Verificato.*
-- [ ] **Test modalità aereo** (cruciale): un giorno intero offline prima di partire.
+- [x] **Test modalità aereo** (cruciale) · ✅ COMPLETATO (30/06/2026). Test E2E automatico
+      ripetibile: `npm run test:offline` (`scripts/test-offline.mjs`, Playwright). Registra il
+      service worker, scarica la precache, poi va **offline reale** (`context.setOffline`) e
+      attraversa tutte le route. *Verificato: 11/11 route senza errori di rete; la mappa carica i
+      tile dal pmtiles in cache (770 feature renderizzate offline).* Due bug offline trovati e corretti:
+  - **Rilevamento asset via HEAD** (`online.svelte.ts`, `Mappa.svelte`, `routing.ts`): le sonde
+    `fetch HEAD` non sono servite dalla cache del SW (Workbox cacha solo GET) → in modalità aereo
+    l'app credeva mappa/routing/audio non installati e ripiegava sui fallback remoti. Sostituite con
+    un check su `caches.match` (`src/lib/offline-assets.ts`).
+  - **Byte serving pmtiles** (`src/lib/pmtiles-source.ts`): pmtiles legge l'archivio con richieste
+    HTTP Range, ma la precache restituisce il 200 intero → mappa nera offline. Risolto con un Source
+    custom che ritaglia i byte dal Blob già in cache (`Blob.slice`, niente 100 MB in RAM).
+  - Pulizia: manifest precache deduplicato (3803→3569 voci, era doppio per `includeAssets`+`globPatterns`);
+    `svelte-check` pulito (0 errori, 0 warning); supporto tastiera (Esc) sulle modali.
+
+  > Resta da fare a ridosso della partenza: **un giorno intero reale** in modalità aereo sul telefono
+  > (il test automatico copre l'app servita; il device prova anche eviction storage e installazione PWA).
 
 ### Fase 2 — I ricordi (~6–9 gg) · alto impatto, client-side
 - [ ] **Import foto** (2.a): selezione file (proprie + ricevute), lettura EXIF con `exifr`.

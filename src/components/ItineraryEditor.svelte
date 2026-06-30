@@ -67,6 +67,10 @@
     onclose();
   }
 
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') close();
+  }
+
   function addStop(poiId: string) {
     if (!stops.includes(poiId)) stops = [...stops, poiId];
     pickerOpen = false;
@@ -104,12 +108,15 @@
   }
 </script>
 
+<svelte:window onkeydown={onKeydown} />
 <div class="editor-backdrop" onclick={close} use:portal role="presentation">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="editor"
     style="--accent: {accent}"
     onclick={(e) => e.stopPropagation()}
     role="dialog"
+    tabindex="-1"
     aria-modal="true"
     aria-labelledby="itin-editor-title"
   >

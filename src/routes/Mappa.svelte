@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { Map as MlMap, Marker as MlMarker } from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
-  import { pois, poiById, citta, cittaById, itinerario, transports } from '../lib/content';
+  import { pois, poiById, citta, itinerario, transports } from '../lib/content';
   import { computeOggi } from '../lib/today';
   import { go, nav } from '../lib/router.svelte';
   import {
@@ -30,6 +30,8 @@
   import { CAT_COLOR, CAT_ICON, CAT_LABEL } from '../lib/poi';
   import { offlineMapStyle } from '../lib/mapStyle';
   import { online } from '../lib/online.svelte';
+  import { isOfflineAssetReady } from '../lib/offline-assets';
+  import { CachedRangeSource } from '../lib/pmtiles-source';
   import PoiPhoto from '../components/PoiPhoto.svelte';
   import ScreenHeader from '../components/ScreenHeader.svelte';
   import { cityTheme } from '../lib/city-theme';
@@ -55,7 +57,6 @@
   let geoNote = $state('');
   type MapLayer = 'poi' | 'metro' | 'route';
   let mapLayer = $state<MapLayer>('poi');
-  let poiQuery = $state('');
   let metroLineFilter = $state<string>('all');
   let metroQuery = $state('');
   type MetroSheetTab = 'route' | 'list';
@@ -94,7 +95,7 @@
 
   let itinDragStartY = 0;
   let itinDragStartH = 0;
-  let itinDragging = false;
+  let itinDragging = $state(false);
 
   const itinCompact = $derived(itinSheetH < ITIN_H_COMPACT);
 
@@ -142,35 +143,6 @@
 
   const activeCityMeta = $derived(citta.find((c) => c.id === activeCity));
   const mapAccent = $derived(cityTheme(activeCity).accent);
-
-  const poiSearchHits = $derived.by(() => {
-    const q = poiQuery.trim().toLowerCase();
-    if (q.length < 2) return [];
-    const inCity = pois.filter((p) => p.city === activeCity);
-    const rest = pois.filter((p) => p.city !== activeCity);
-    const pool = [...inCity, ...rest];
-    const out: typeof pois = [];
-    const seen = new Set<string>();
-    for (const p of pool) {
-      if (seen.has(p.id)) continue;
-      const hay = `${p.name} ${p.blurb ?? ''} ${p.nameLocal ?? ''} ${CAT_LABEL[p.category]}`.toLowerCase();
-      if (hay.includes(q)) {
-        seen.add(p.id);
-        out.push(p);
-        if (out.length >= 8) break;
-      }
-    }
-    return out;
-  });
-
-  function pickPoiSearch(poiId: string) {
-    const p = poiById.get(poiId);
-    if (!p) return;
-    poiQuery = '';
-    activeCity = p.city;
-    setMapLayer('poi');
-    go('mappa', poiId);
-  }
 
   const routeFromPicks = $derived(
     pickField === 'from' ? filterMetroStations(metroData.stations, routeFromQ) : [],
@@ -326,7 +298,6 @@
 
   /** Chiude pannello navigazione e torna alla mappa libera. */
   function closeNavSheet() {
-    poiQuery = '';
     if (nav.seg === 'mappa' && nav.id && !nav.id.startsWith('itin:')) {
       go('mappa');
     }
@@ -764,25 +735,20 @@
 
   async function init(): Promise<(() => void) | void> {
     // la mappa base (vie) richiede public/tiles/cina.pmtiles (vedi npm run tiles).
-    // HEAD può dare falso positivo per il fallback SPA (200 text/html quando il file
-    // non esiste): si esclude esplicitamente la risposta html di fallback.
-    try {
-      const head = await fetch('/tiles/cina.pmtiles', { method: 'HEAD' });
-      const ct = head.headers.get('content-type') ?? '';
-      const len = Number(head.headers.get('content-length') ?? 0);
-      tilesAvailable =
-        head.ok && !ct.includes('text/html') && (len === 0 || len > 10_000);
-    } catch {
-      tilesAvailable = false;
-    }
+    // Si interroga la cache del SW (offline-safe): una HEAD di rete fallirebbe in
+    // modalità aereo e farebbe ripiegare, a torto, sullo stile remoto.
+    tilesAvailable = await isOfflineAssetReady('/tiles/cina.pmtiles');
     routingOffline = await hasLocalRoutingTiles();
 
     const ml = await import('maplibre-gl');
     MarkerCtor = ml.Marker;
 
     if (tilesAvailable) {
-      const { Protocol } = await import('pmtiles');
+      const { Protocol, PMTiles } = await import('pmtiles');
       const protocol = new Protocol();
+      // Archivio servito dalla cache del SW via Blob.slice (byte serving offline):
+      // la chiave deve combaciare con `pmtiles://<key>` nello style.
+      protocol.add(new PMTiles(new CachedRangeSource('/tiles/cina.pmtiles')));
       ml.addProtocol('pmtiles', protocol.tile);
     }
 
@@ -802,6 +768,11 @@
       ensureMetroLayers();
       ensureMetroTripLayers();
       mapReady = true;
+      // Hook per il test offline (scripts/test-offline.mjs): espone la mappa solo
+      // se il test ha impostato il flag, per verificare il caricamento dei tile.
+      if (typeof window !== 'undefined' && (window as unknown as { __E2E?: boolean }).__E2E) {
+        (window as unknown as { __cinaMap?: unknown }).__cinaMap = map;
+      }
     });
     map.on('click', () => {
       if (mapLayer !== 'metro' && !navigating) clearPoiFocus();
@@ -879,7 +850,7 @@
         }
         if (navigating) onNavGpsUpdate(longitude, latitude, heading);
       },
-      () => (geoNote = 'Posizione non disponibile (permesso negato o offline).'),
+      () => (geoNote = 'Posizione non disponibile (permesso negato o GPS senza segnale).'),
       { enableHighAccuracy: true, maximumAge: navigating ? 1000 : 5000 },
     );
   }
@@ -1230,44 +1201,7 @@
         </button>
       {/if}
 
-      <div class="map-chrome-panel">
-        <div class="poi-search-wrap">
-          <label class="sr-only" for="map-poi-search">Cerca destinazione</label>
-          <span class="poi-search-ic" aria-hidden="true">⌕</span>
-          <input
-            id="map-poi-search"
-            class="poi-search"
-            type="search"
-            placeholder="Cerca luogo…"
-            bind:value={poiQuery}
-            autocomplete="off"
-            autocorrect="off"
-            onfocus={() => setMapLayer('poi')}
-          />
-          {#if poiQuery.trim().length >= 2}
-            <ul class="poi-search-hits" role="listbox" aria-label="Risultati ricerca">
-              {#each poiSearchHits as p (p.id)}
-                <li role="option">
-                  <button type="button" class="poi-hit" onclick={() => pickPoiSearch(p.id)}>
-                    <PoiPhoto id={p.id} category={p.category} name={p.name} variant="thumb" />
-                    <span class="poi-hit-body">
-                      <span class="poi-hit-name">{p.name}</span>
-                      {#if p.nameLocal}<span class="poi-hit-cn">{p.nameLocal}</span>{/if}
-                      <span class="poi-hit-meta">
-                        <span class="poi-hit-cat" style="--c:{CAT_COLOR[p.category]}">{CAT_LABEL[p.category]}</span>
-                        <span class="poi-hit-city">{cittaById.get(p.city)?.name ?? p.city}</span>
-                      </span>
-                    </span>
-                    <span class="poi-hit-go" aria-hidden="true">›</span>
-                  </button>
-                </li>
-              {:else}
-                <li class="poi-hit-empty">Nessun luogo per «{poiQuery.trim()}»</li>
-              {/each}
-            </ul>
-          {/if}
-        </div>
-
+      <div class="map-top">
         <div class="cities" role="tablist" aria-label="Città">
           {#each citta as c (c.id)}
             {@const th = cityTheme(c.id)}
@@ -1291,25 +1225,26 @@
       </div>
 
       {#if mapLayer === 'poi'}
-        <div class="map-status-row">
-          {#if tilesAvailable}
-            <span class="map-status ok">
-              {#if !online.network}✈ Offline{:else}✓ Online{/if}
-              · mappa{#if routingOffline} · routing{/if}
-            </span>
-          {:else}
-            <span class="map-status warn">🌐 Mappa online</span>
-          {/if}
-          {#if geoNote}<span class="map-status geo">{geoNote}</span>{/if}
-        </div>
-
-        <div class="map-legend">
-          {#each LEGEND as cat (cat)}
-            <span class="lg">
-              <span class="lg-ic" style="border-color:{CAT_COLOR[cat]}; color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>
-              {CAT_LABEL[cat]}
-            </span>
-          {/each}
+        <div class="map-bottom">
+          <div class="map-info-row">
+            {#each LEGEND as cat (cat)}
+              <span class="lg">
+                <span class="lg-ic" style="border-color:{CAT_COLOR[cat]}; color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>
+                {CAT_LABEL[cat]}
+              </span>
+            {/each}
+          </div>
+          <div class="map-status-line">
+            {#if tilesAvailable}
+              <span class="map-status ok">
+                {#if !online.network}✈ Offline{:else}✓ Online{/if}
+                · mappa{#if routingOffline} · routing{/if}
+              </span>
+            {:else}
+              <span class="map-status warn">🌐 Mappa online</span>
+            {/if}
+            {#if geoNote}<span class="map-status geo">{geoNote}</span>{/if}
+          </div>
         </div>
       {/if}
     </div>
@@ -1675,9 +1610,8 @@
   .mappa-page.navigating-mode :global(.map-screen-head),
   .mappa-page.itin-mode :global(.map-screen-head) { display: none; }
 
-  .mappa-page.navigating-mode .map-chrome-panel,
-  .mappa-page.navigating-mode .map-legend,
-  .mappa-page.navigating-mode .map-status-row {
+  .mappa-page.navigating-mode .map-top,
+  .mappa-page.navigating-mode .map-bottom {
     display: none;
   }
   .mappa-page.navigating-mode .map-stage {
@@ -1778,124 +1712,25 @@
     margin-bottom: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
   }
-  .map-chrome-panel {
+  /* Zona alta: ricerca + città + vista (controlli leggeri, niente cardone) */
+  .map-top {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 8px;
-    padding: 10px;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
-    backdrop-filter: saturate(1.5) blur(18px);
-    -webkit-backdrop-filter: saturate(1.5) blur(18px);
-    border: 1px solid color-mix(in srgb, #fff 12%, var(--line-strong));
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
-  .map-stage.fullscreen .map-chrome-panel {
-    margin-top: 0;
-  }
-
-  .poi-search-wrap {
-    position: relative;
-    z-index: 20;
-  }
-  .poi-search-ic {
-    position: absolute;
-    left: 13px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.95rem;
-    color: var(--jade-bright);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .poi-search {
+  .map-top .cities {
     width: 100%;
-    padding: 11px 14px 11px 38px;
-    font-size: 0.92rem;
-    border-radius: var(--radius-pill);
-    border: 1px solid color-mix(in srgb, var(--jade) 25%, var(--line-strong));
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
-  .poi-search:focus {
-    border-color: color-mix(in srgb, var(--jade) 55%, var(--line-strong));
-    box-shadow: 0 0 0 3px var(--jade-soft);
+  .map-top .layer-tabs {
+    align-self: center;
   }
-  .poi-search-hits {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 6px);
-    list-style: none;
-    margin: 0;
-    padding: 6px;
-    max-height: min(45vh, 280px);
-    overflow-y: auto;
-    background: var(--sheet-bg-solid);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-  }
-  .poi-hit {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 10px;
-    text-align: left;
-    border-radius: var(--radius-sm);
-    transition: background 0.12s;
-  }
-  .poi-hit:active { background: var(--paper-2); }
-  .poi-hit-body {
-    flex: 1;
-    min-width: 0;
+  /* Zona bassa: legenda + stato (solo modalità POI) */
+  .map-bottom {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-  }
-  .poi-hit-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--ink);
-    line-height: 1.25;
-  }
-  .poi-hit-cn {
-    font-family: var(--hanzi);
-    font-size: 0.88rem;
-    color: var(--ink-soft);
-  }
-  .poi-hit-meta {
-    display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 2px;
-  }
-  .poi-hit-cat {
-    font-family: var(--mono);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--c);
-  }
-  .poi-hit-city {
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--ink-faint);
-  }
-  .poi-hit-go {
-    flex: none;
-    color: var(--jade-bright);
-    font-size: 1.15rem;
-  }
-  .poi-hit-empty {
-    padding: 12px;
-    font-size: 0.82rem;
-    color: var(--ink-faint);
-    text-align: center;
+    gap: 6px;
   }
 
   .cities {
@@ -1927,42 +1762,60 @@
   .city:active { transform: scale(0.97); }
 
   .layer-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
+    display: inline-grid;
+    grid-auto-flow: column;
+    gap: 3px;
     padding: 4px;
-    background: color-mix(in srgb, var(--paper-2) 80%, transparent);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, #000 50%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: var(--radius-pill);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
   }
   .layer-tab {
-    padding: 7px 6px;
+    padding: 7px 20px;
     border: none;
     border-radius: var(--radius-pill);
     background: transparent;
     font-family: var(--mono);
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--ink-faint);
+    color: rgba(255, 255, 255, 0.62);
     transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   }
   .layer-tab.on {
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--line-strong);
+    background: #fff;
+    color: #14110d;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
   }
 
-  .map-status-row {
+  /* Stato (in alto, sotto le città): una riga compatta, mai a capo */
+  .map-status-line {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
-    align-self: flex-start;
-    margin-top: auto;
+    max-width: 100%;
   }
+  /* Legenda categorie (in basso, sopra il segmentato): centrata, scorrevole */
+  .map-info-row {
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 1px;
+  }
+  .map-info-row::-webkit-scrollbar { display: none; }
   .map-status {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-family: var(--mono);
     font-size: 9px;
     font-weight: 600;
@@ -1975,6 +1828,7 @@
     background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
     color: var(--ink-soft);
   }
+  .map-status.ok { flex: none; }
   .map-status.ok {
     color: var(--jade-bright);
     border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
@@ -1986,15 +1840,6 @@
   }
   .map-status.geo { color: var(--gold); }
 
-  .map-legend {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 6px 2px 2px;
-    max-width: 100%;
-  }
-  .map-legend::-webkit-scrollbar { display: none; }
   .lg {
     flex: none;
     display: inline-flex;
@@ -2026,15 +1871,15 @@
   /* ── FABs ── */
   .map-fabs {
     position: absolute;
-    bottom: 56px;
-    right: 10px;
+    bottom: 72px;
+    right: 12px;
     z-index: 8;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
   .map-stage.fullscreen .map-fabs {
-    bottom: calc(14px + var(--safe-bottom));
+    bottom: calc(20px + var(--safe-bottom));
     right: 12px;
   }
   .map-fab {
@@ -2210,20 +2055,6 @@
     margin: 0;
     font-size: 0.85rem;
     line-height: 1.45;
-    color: var(--ink-faint);
-  }
-  .metro-sheet-top {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: none;
-  }
-  .metro-sheet-title {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink-faint);
   }
   .metro-search {
@@ -2672,16 +2503,6 @@
     font-size: 0.78rem;
     margin: 0;
     padding: 4px 2px 8px;
-  }
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
   }
   .itin-sheet-head {
     display: flex;

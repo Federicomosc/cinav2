@@ -8,7 +8,10 @@ export default defineConfig({
     svelte(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['app-icon.svg', 'fonts/**/*', 'phrases/**/*', 'places/**/*'],
+      // NB: non elencare qui font/phrases/places: sono già coperti da
+      // `workbox.globPatterns` (woff2/pbf/m4a/jpg). Duplicarli genera due voci
+      // di precache per file (una URL-encoded, una no) → manifest gonfio.
+      includeAssets: ['app-icon.svg'],
       manifest: {
         name: 'Cina Tour 2026',
         short_name: 'Cina 2026',

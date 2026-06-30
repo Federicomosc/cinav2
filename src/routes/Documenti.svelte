@@ -382,6 +382,13 @@
     showResetConfirm = false;
   }
 
+  function onModalEscape(e: KeyboardEvent) {
+    if (e.key !== 'Escape') return;
+    if (showResetConfirm && !resetConfirmOpening) showResetConfirm = false;
+    else if (deleteTarget) deleteTarget = null;
+    else if (preview) closePreview();
+  }
+
   async function resetVault() {
     busy = true;
     try {
@@ -589,9 +596,12 @@
   </section>
 </div>
 
+<svelte:window onkeydown={onModalEscape} />
+
 {#if preview}
   <div class="preview-backdrop" use:portal role="presentation" onclick={(e) => e.target === e.currentTarget && closePreview()}>
-    <div class="preview-panel" role="dialog" aria-labelledby="preview-title" onclick={(e) => e.stopPropagation()}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="preview-panel" role="dialog" tabindex="-1" aria-labelledby="preview-title" onclick={(e) => e.stopPropagation()}>
       <header class="preview-head">
         <div class="preview-head-text">
           <span class="preview-kind">{KIND_ICON[preview.kind]} {KIND_LABEL[preview.kind]}</span>
@@ -616,9 +626,11 @@
 
 {#if deleteTarget}
   <div class="confirm-backdrop" role="presentation" use:portal onclick={(e) => e.target === e.currentTarget && (deleteTarget = null)}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="confirm-card"
       role="alertdialog"
+      tabindex="-1"
       aria-labelledby="del-title"
       onclick={(e) => e.stopPropagation()}
     >
@@ -636,9 +648,11 @@
 
 {#if showResetConfirm}
   <div class="confirm-backdrop" role="presentation" use:portal onclick={closeResetConfirm}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="confirm-card"
       role="alertdialog"
+      tabindex="-1"
       aria-labelledby="reset-title"
       onclick={(e) => e.stopPropagation()}
     >
@@ -814,7 +828,6 @@
     line-height: 1.45;
     margin-bottom: 12px;
   }
-  .vault input,
   .vault-card input,
   .vault-card select {
     width: 100%;

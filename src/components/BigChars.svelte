@@ -33,13 +33,20 @@
     if (e.target !== e.currentTarget) return;
     onclose();
   }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && !closingGuard) onclose();
+  }
 </script>
 
+<svelte:window onkeydown={onKeydown} />
 <div class="big-backdrop" use:portal role="presentation" onclick={onBackdrop}>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="big-panel"
     class:long={hanzi.length > 18}
     role="dialog"
+    tabindex="-1"
     aria-labelledby="big-hanzi"
     aria-modal="true"
     onclick={(e) => e.stopPropagation()}

@@ -2,6 +2,7 @@
 
 import { route } from 'omt-router';
 import { buildStepsFromCoordinates } from './nav-guidance';
+import { isOfflineAssetReady } from './offline-assets';
 
 const REMOTE_TILE_JSON = 'https://tiles.openfreemap.org/planet';
 const LOCAL_TILEJSON = '/tiles/routing/tilejson.json';
@@ -347,10 +348,5 @@ export const AUTO_NAV_KEY = 'mappa-auto-nav';
 
 /** true se i tile routing locali sono installati (npm run tiles:routing). */
 export async function hasLocalRoutingTiles(): Promise<boolean> {
-  try {
-    const r = await fetch(LOCAL_TILEJSON, { method: 'HEAD' });
-    return r.ok;
-  } catch {
-    return false;
-  }
+  return isOfflineAssetReady(LOCAL_TILEJSON);
 }
