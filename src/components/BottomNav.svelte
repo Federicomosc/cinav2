@@ -79,9 +79,9 @@
     max-width: 456px;
     min-height: calc(var(--nav-h) + var(--safe-bottom));
     padding-bottom: var(--safe-bottom);
-    background: var(--nav-shell-bar);
-    backdrop-filter: saturate(1.6) blur(24px);
-    -webkit-backdrop-filter: saturate(1.6) blur(24px);
+    /* Sfondo più opaco invece di backdrop-filter: la nav è sempre sopra il
+       contenuto che scorre e il blur la farebbe ri-rasterizzare a ogni frame. */
+    background: color-mix(in srgb, var(--paper) 12%, var(--nav-shell-bar));
     border: 1px solid var(--line-strong);
     border-bottom: none;
     border-radius: 22px 22px 0 0;

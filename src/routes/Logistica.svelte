@@ -416,8 +416,8 @@
     margin-bottom: 14px;
     padding: 16px 18px 14px;
     background: color-mix(in srgb, var(--surface-elevated) 85%, transparent);
-    backdrop-filter: saturate(1.4) blur(16px);
-    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid color-mix(in srgb, var(--day-accent) 22%, var(--line-strong));
     border-radius: var(--radius-lg);
     box-shadow:
@@ -654,8 +654,8 @@
     margin-bottom: 16px;
     padding: 8px 10px;
     background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
-    backdrop-filter: saturate(1.4) blur(14px);
-    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -928,8 +928,8 @@
     margin: 16px 18px 0;
     padding: 14px 16px;
     background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
-    backdrop-filter: saturate(1.3) blur(14px);
-    -webkit-backdrop-filter: saturate(1.3) blur(14px);
+    backdrop-filter: saturate(1.3) blur(8px);
+    -webkit-backdrop-filter: saturate(1.3) blur(8px);
     border: 1px solid color-mix(in srgb, var(--cinabro) 28%, var(--line-strong));
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);

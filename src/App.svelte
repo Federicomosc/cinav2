@@ -57,6 +57,15 @@
     navMotion.dir === 1 ? 'slide-forward' : navMotion.dir === -1 ? 'slide-back' : '',
   );
 
+  // La Mappa è pesante (MapLibre + tile + marker): la montiamo alla prima
+  // apertura e poi la teniamo VIVA, mostrandola/nascondendola, così le
+  // riaperture sono istantanee invece di re-inizializzare tutto ogni volta.
+  const isMap = $derived(route.key === 'mappa');
+  let mapMounted = $state(false);
+  $effect(() => {
+    if (isMap) mapMounted = true;
+  });
+
   let navCompact = $state(false);
 
   function onScreenScroll(e: Event) {
@@ -82,11 +91,20 @@
   >
     <OfflineBanner />
     <ToastStack />
-    {#key route.key}
-      <div class="route-view {routeMotionClass}">
-        <Comp />
+
+    {#if mapMounted}
+      <div class="route-view map-keepalive" class:map-hidden={!isMap} aria-hidden={!isMap}>
+        <Mappa />
       </div>
-    {/key}
+    {/if}
+
+    {#if !isMap}
+      {#key route.key}
+        <div class="route-view {routeMotionClass}">
+          <Comp />
+        </div>
+      {/key}
+    {/if}
   </main>
 
   <BottomNav compact={navCompact} />
@@ -104,4 +122,7 @@
       left: 14px;
     }
   }
+  /* Mappa tenuta viva ma fuori dalla tab attiva */
+  .map-keepalive { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .map-hidden { display: none; }
 </style>

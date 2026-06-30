@@ -719,6 +719,20 @@
     }
   });
 
+  // Mappa tenuta viva: quando torna visibile va ridimensionata (MapLibre non
+  // misura da display:none) e il GPS riattivato; in pausa quando esci, per
+  // non scaricare la batteria mentre sei su altre schede.
+  $effect(() => {
+    const onMap = nav.seg === 'mappa';
+    if (!mapReady) return;
+    if (onMap) {
+      requestAnimationFrame(() => map?.resize());
+      resumeGeo();
+    } else {
+      pauseGeo();
+    }
+  });
+
   onMount(() => {
     let cleanupFns: (() => void)[] = [];
     void init().then((fn) => fn && cleanupFns.push(fn));
@@ -853,6 +867,18 @@
       () => (geoNote = 'Posizione non disponibile (permesso negato o GPS senza segnale).'),
       { enableHighAccuracy: true, maximumAge: navigating ? 1000 : 5000 },
     );
+  }
+
+  /** Ferma il GPS quando la mappa non è visibile (la mappa resta viva). */
+  function pauseGeo() {
+    if (watchId != null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  }
+  /** Riprende il GPS al ritorno sulla mappa. */
+  function resumeGeo() {
+    if (watchId == null && MarkerCtor) startGeolocation(MarkerCtor);
   }
 
   function flyTo(c: CityId) {
@@ -1193,14 +1219,14 @@
     ></div>
   </div>
 
-  {#if !navigating && !activeItin}
-    <div class="map-chrome">
-      {#if mapFullscreen}
-        <button type="button" class="fs-exit" onclick={exitMapFullscreen}>
-          <span aria-hidden="true">⊡</span> Esci schermo intero
-        </button>
-      {/if}
+  {#if mapFullscreen}
+    <button type="button" class="fs-close" onclick={exitMapFullscreen} aria-label="Esci da schermo intero">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  {/if}
 
+  {#if !navigating && !activeItin && !navDestPoi}
+    <div class="map-chrome">
       <div class="map-top">
         <div class="cities" role="tablist" aria-label="Città">
           {#each citta as c (c.id)}
@@ -1250,21 +1276,19 @@
     </div>
   {/if}
 
-  <div class="map-fabs">
-    {#if !navigating && !activeItin}
-      <button
-        type="button"
-        class="map-fab fs"
-        class:on={mapFullscreen}
-        onclick={toggleMapFullscreen}
-        aria-label={mapFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
-        aria-pressed={mapFullscreen}
-      >
-        {mapFullscreen ? '⊡' : '⛶'}
-      </button>
-    {/if}
-    <button type="button" class="map-fab gps" onclick={recenter} aria-label="Centra sulla posizione">◎</button>
-  </div>
+  {#if !navDestPoi}
+    <div class="map-fabs">
+      {#if !navigating && !activeItin && !mapFullscreen}
+        <button
+          type="button"
+          class="map-fab fs"
+          onclick={toggleMapFullscreen}
+          aria-label="Schermo intero"
+        >⛶</button>
+      {/if}
+      <button type="button" class="map-fab gps" onclick={recenter} aria-label="Centra sulla posizione">◎</button>
+    </div>
+  {/if}
 
   {#if activeItin}
     <aside
@@ -1692,26 +1716,26 @@
     padding: 10px 10px 12px;
   }
   .map-chrome > * { pointer-events: auto; }
-  .fs-exit {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  /* Chiusura fullscreen: × compatto in alto a destra, fuori dal flusso del
+     chrome (così città in alto e legenda in basso restano al loro posto). */
+  .fs-close {
+    position: absolute;
+    top: calc(10px + var(--safe-top));
+    right: 10px;
+    z-index: 9;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
     color: #fff;
-    padding: 8px 14px;
-    border-radius: var(--radius-pill);
     border: 1px solid rgba(255, 255, 255, 0.22);
-    background: color-mix(in srgb, #000 55%, transparent);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    margin-bottom: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    background: color-mix(in srgb, #000 52%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
+  .fs-close:active { transform: scale(0.94); }
   /* Zona alta: ricerca + città + vista (controlli leggeri, niente cardone) */
   .map-top {
     display: flex;
@@ -1724,6 +1748,14 @@
   }
   .map-top .layer-tabs {
     align-self: center;
+  }
+  /* In fullscreen: città più strette (lasciano il pulsante × in alto a destra),
+     e legenda/stato nascosti per una vista mappa pulita. */
+  .map-stage.fullscreen .cities {
+    width: calc(100% - 52px);
+  }
+  .map-stage.fullscreen .map-bottom {
+    display: none;
   }
   /* Zona bassa: legenda + stato (solo modalità POI) */
   .map-bottom {
@@ -1767,8 +1799,8 @@
     gap: 3px;
     padding: 4px;
     background: color-mix(in srgb, #000 50%, transparent);
-    backdrop-filter: saturate(1.4) blur(16px);
-    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: var(--radius-pill);
     box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
@@ -1879,7 +1911,7 @@
     gap: 8px;
   }
   .map-stage.fullscreen .map-fabs {
-    bottom: calc(20px + var(--safe-bottom));
+    bottom: calc(30px + var(--safe-bottom));
     right: 12px;
   }
   .map-fab {
@@ -1888,8 +1920,8 @@
     border-radius: 14px;
     border: 1px solid color-mix(in srgb, #fff 18%, var(--line-strong));
     background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
-    backdrop-filter: saturate(1.4) blur(14px);
-    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     color: var(--ink-soft);
     font-size: 17px;
     line-height: 1;
@@ -1899,12 +1931,6 @@
     transition: transform 0.15s var(--ease), border-color 0.15s;
   }
   .map-fab:active { transform: scale(0.94); }
-  .map-fab.fs.on,
-  .map-fab.fs[aria-pressed='true'] {
-    color: var(--map-accent);
-    border-color: color-mix(in srgb, var(--map-accent) 45%, var(--line));
-    background: color-mix(in srgb, var(--map-accent) 14%, var(--surface-elevated));
-  }
   .map-fab.gps {
     color: var(--jade-bright);
     border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
@@ -1926,8 +1952,8 @@
     gap: 8px;
     padding: 10px 12px;
     background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
-    backdrop-filter: saturate(1.4) blur(18px);
-    -webkit-backdrop-filter: saturate(1.4) blur(18px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid color-mix(in srgb, var(--map-accent) 22%, var(--line-strong));
     border-radius: var(--radius-md);
     box-shadow:
@@ -2153,8 +2179,8 @@
     bottom: 10px;
     z-index: 5;
     background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
-    backdrop-filter: saturate(1.4) blur(18px);
-    -webkit-backdrop-filter: saturate(1.4) blur(18px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid color-mix(in srgb, var(--jade) 28%, var(--line-strong));
     border-radius: var(--radius-md);
     padding: 14px 16px;
@@ -2245,8 +2271,8 @@
     padding: 14px 16px 12px;
     border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
-    backdrop-filter: saturate(1.4) blur(16px);
-    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    backdrop-filter: saturate(1.4) blur(8px);
+    -webkit-backdrop-filter: saturate(1.4) blur(8px);
     border: 1px solid color-mix(in srgb, var(--jade) 35%, var(--line-strong));
     box-shadow: var(--shadow-lg), 0 0 32px color-mix(in srgb, var(--jade) 15%, transparent);
   }
@@ -2342,7 +2368,7 @@
     display: flex;
     flex-direction: column;
     background: var(--sheet-bg-solid);
-    backdrop-filter: blur(16px);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--line-strong);
     border-radius: var(--radius-md);
     padding: 4px 12px 8px;

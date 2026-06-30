@@ -280,7 +280,8 @@ html.map-fs-active .bottom-nav {
   transform: translateY(12px);
   transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
 }
-html.map-fs-active .offline-bar {
+html.map-fs-active .offline-bar,
+html.map-fs-active .shell-theme {
   opacity: 0;
   pointer-events: none;
 }
@@ -501,6 +502,30 @@ button {
   background: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Reattività al tocco: elimina il ritardo ~300ms del doppio-tap e i tap
+   "mancati" sui controlli. NB: NON applicato alla mappa, che gestisce da sé
+   pinch/rotate via il proprio canvas (touch-action: none di MapLibre). */
+button,
+a,
+input,
+select,
+textarea,
+label,
+summary,
+[role='button'],
+[role='tab'],
+[role='option'],
+[role='switch'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+[role='button'],
+[role='tab'] {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .btn-primary {

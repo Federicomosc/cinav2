@@ -38,8 +38,8 @@
     letter-spacing: 0.04em;
     color: var(--ink);
     background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
-    backdrop-filter: saturate(1.5) blur(20px);
-    -webkit-backdrop-filter: saturate(1.5) blur(20px);
+    backdrop-filter: saturate(1.5) blur(8px);
+    -webkit-backdrop-filter: saturate(1.5) blur(8px);
     border: 1px solid var(--line-strong);
     box-shadow: var(--shadow-lg);
   }
