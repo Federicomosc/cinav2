@@ -31,6 +31,7 @@
   import { offlineMapStyle } from '../lib/mapStyle';
   import { online } from '../lib/online.svelte';
   import PoiPhoto from '../components/PoiPhoto.svelte';
+  import ScreenHeader from '../components/ScreenHeader.svelte';
   import { cityTheme } from '../lib/city-theme';
   import { metroForCity, metroGeoJSON, type MetroStation } from '../lib/metro';
   import {
@@ -1190,20 +1191,17 @@
 {/if}
 
 {#if !mapFullscreen && !navigating && !activeItin}
-  <header class="map-head">
-    <div class="map-head-deco" aria-hidden="true">
-      <span class="map-head-line"></span>
-      <span class="map-head-seal">图</span>
-      <span class="map-head-line"></span>
-    </div>
-    <div class="map-head-row">
-      <div class="map-head-titles">
-        <span class="eyebrow">◎ navigatore offline</span>
-        <h1>Mappa</h1>
-      </div>
-      <span class="map-head-pill">{activeCityMeta?.name ?? 'Cina'}</span>
-    </div>
-  </header>
+  <ScreenHeader
+    seal="图"
+    eyebrow="◎ navigatore offline"
+    title="Mappa"
+    compact
+    class="map-screen-head"
+  >
+    {#snippet actions()}
+      <span class="header-pill">{activeCityMeta?.name ?? 'Cina'}</span>
+    {/snippet}
+  </ScreenHeader>
 {/if}
 
 <div
@@ -1673,70 +1671,10 @@
     to { opacity: 1; }
   }
 
-  /* ── Header compatto ── */
-  .map-head { margin-bottom: 12px; }
-  .map-head-deco {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-  .map-head-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      var(--line-strong) 25%,
-      color-mix(in srgb, var(--map-accent) 35%, transparent) 50%,
-      var(--line-strong) 75%,
-      transparent
-    );
-  }
-  .map-head-seal {
-    flex: none;
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    font-family: var(--hanzi);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--map-accent);
-    background: color-mix(in srgb, var(--map-accent) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--map-accent) 30%, var(--line));
-    border-radius: 8px;
-    box-shadow: 0 0 18px color-mix(in srgb, var(--map-accent) 22%, transparent);
-  }
-  .map-head-row {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .map-head-titles h1 {
-    font-family: var(--serif);
-    font-size: 2rem;
-    line-height: 1.02;
-    letter-spacing: -0.02em;
-    margin: 2px 0 0;
-  }
-  .map-head-pill {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--map-accent);
-    padding: 6px 12px;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--map-accent) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--map-accent) 32%, var(--line));
-  }
+  /* ── Header (ScreenHeader) ── */
+  .mappa-page.navigating-mode :global(.map-screen-head),
+  .mappa-page.itin-mode :global(.map-screen-head) { display: none; }
 
-  .mappa-page.navigating-mode .map-head,
-  .mappa-page.itin-mode .map-head { display: none; }
   .mappa-page.navigating-mode .map-chrome-panel,
   .mappa-page.navigating-mode .map-legend,
   .mappa-page.navigating-mode .map-status-row {

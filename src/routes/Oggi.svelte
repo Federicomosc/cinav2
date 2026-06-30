@@ -5,7 +5,6 @@
     cittaById,
     poisOfCity,
     giorni,
-    alloggioByCity,
   } from '../lib/content';
   import { computeOggi } from '../lib/today';
   import { longDate, hhmm, shortDate, daysBetween } from '../lib/format';
@@ -15,18 +14,20 @@
   import { liveQuery } from 'dexie';
   import { onMount } from 'svelte';
   import type { CityId } from '../data/types';
-  import { cityTheme } from '../lib/city-theme';
-  import { theme, toggleNightMode } from '../lib/theme.svelte';
+  import { cityTheme, cityCoverSrc } from '../lib/city-theme';
+  import ScreenHeader from '../components/ScreenHeader.svelte';
   import ShortcutIcon from '../components/ShortcutIcon.svelte';
   import { haptic } from '../lib/haptic';
+  import { showToast } from '../lib/toast.svelte';
 
   const info = computeOggi(itinerario, transports);
   const city = $derived(info.leg ? cittaById.get(info.leg.city) : undefined);
   const nt = info.nextTransport;
   const typeLabel: Record<string, string> = { flight: 'Volo', train: 'Treno', bus: 'Bus' };
-  const typeIcon: Record<string, string> = { flight: '✈', train: '🚄', bus: '🚌' };
 
-  const accent = $derived(info.leg ? cityTheme(info.leg.city).accent : '#e04a28');
+  const accent = $derived(info.leg ? cityTheme(info.leg.city).accent : '#e84828');
+  const theme = $derived(info.leg ? cityTheme(info.leg.city) : null);
+  const coverSrc = $derived(info.leg ? cityCoverSrc(info.leg.city) : '');
 
   const tripTotalDays = $derived(daysBetween(itinerario.trip.start, itinerario.trip.end) + 1);
   const tripDay = $derived(
@@ -39,7 +40,14 @@
   const tripPct = $derived(Math.round((tripDay / tripTotalDays) * 100));
 
   const todayProgram = $derived(giorni.find((g) => g.date === info.todayIso));
-  const alloggio = $derived(info.leg ? alloggioByCity.get(info.leg.city) : undefined);
+  const visibleActs = $derived(todayProgram?.acts.slice(0, 4) ?? []);
+  const moreActs = $derived(
+    todayProgram && todayProgram.acts.length > 4 ? todayProgram.acts.length - 4 : 0,
+  );
+
+  const bookings = $derived(
+    info.leg ? poisOfCity(info.leg.city).filter((p) => p.booking && /obblig/i.test(p.booking)) : [],
+  );
 
   let checkedActs = $state<Set<string>>(new Set());
   onMount(() => {
@@ -55,6 +63,7 @@
     else {
       await db.actChecks.put({ id, checkedAt: now() });
       haptic(10);
+      showToast('Attività completata');
     }
   }
 
@@ -66,338 +75,196 @@
   const todayAllDone = $derived(
     !!todayProgram?.acts.length && todayProgress === todayProgram.acts.length,
   );
-  const cityIcon = $derived(info.leg ? cityTheme(info.leg.city).icon : '📍');
-
-  const bookings = $derived(
-    info.leg ? poisOfCity(info.leg.city).filter((p) => p.booking && /obblig/i.test(p.booking)) : [],
-  );
 
   const shortcuts = [
-    { route: 'frasario' as const, label: 'Frasario', desc: 'Mostra al tassista', hue: 'c' },
-    { route: 'spese' as const, label: 'Valuta', desc: 'Converti & dividi', hue: 'g' },
-    { route: 'emergenze' as const, label: 'Salute', desc: 'Numeri SOS', hue: 'j' },
-    { route: 'mappa' as const, label: 'Mappa', desc: 'POI & GPS', hue: 'b' },
+    { route: 'frasario' as const, label: 'Frasario', desc: 'Al tassista', hue: 'c' },
+    { route: 'spese' as const, label: 'Valuta', desc: 'Converti', hue: 'g' },
+    { route: 'emergenze' as const, label: 'Salute', desc: 'SOS', hue: 'j' },
+    { route: 'mappa' as const, label: 'Mappa', desc: 'GPS', hue: 'b' },
     { route: 'documenti' as const, label: 'Documenti', desc: 'Cassaforte', hue: 'p' },
-    { route: 'logistica' as const, label: 'Viaggio', desc: 'Timeline 20 gg', hue: 'r' },
+    { route: 'logistica' as const, label: 'Viaggio', desc: '20 giorni', hue: 'r' },
   ];
-
-  const hasStayTonight = $derived(info.phase === 'during' && !!alloggio);
 
   function legIndex(cityId: CityId): number {
     return itinerario.legs.findIndex((l) => l.city === cityId) + 1;
   }
 </script>
 
-<div class="oggi" style={info.phase === 'during' ? `--accent:${accent}` : undefined}>
+<div class="oggi" style={info.phase === 'during' && city ? `--accent:${accent}` : undefined}>
   {#if info.phase === 'before'}
-    <header class="pre-launch card">
-      <div class="pre-accent" aria-hidden="true"></div>
-      <div class="pre-inner">
-        <div class="pre-meta">
-          <time class="pre-today" datetime={info.todayIso}>{longDate(info.todayIso)}</time>
-          <div class="pre-meta-end">
-            <button
-              type="button"
-              class="night-toggle"
-              class:on={theme.nightMode}
-              onclick={toggleNightMode}
-              aria-pressed={theme.nightMode}
-              aria-label={theme.nightMode ? 'Disattiva modalità notte' : 'Attiva modalità notte'}
-            >
-              <span class="night-ic" aria-hidden="true">{theme.nightMode ? '🌙' : '☀️'}</span>
-            </button>
-            <span class="pre-tag">Pre-partenza</span>
+    <ScreenHeader seal="今" eyebrow="Pre-partenza" title="Oggi" sub={longDate(info.todayIso)} compact />
+
+    <section class="pre card">
+      <div class="pre-bar" aria-hidden="true"></div>
+      <span class="pre-wm" aria-hidden="true">行</span>
+      <div class="pre-body">
+        <div class="pre-ring-wrap">
+          <svg class="pre-ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="ring-bg" cx="60" cy="60" r="52" />
+            <circle
+              class="ring-fg"
+              cx="60"
+              cy="60"
+              r="52"
+              style="stroke-dasharray: 326; stroke-dashoffset: {326 - (326 * Math.min(info.daysToStart, 30)) / 30}"
+            />
+          </svg>
+          <div class="pre-count">
+            <span class="pre-num">{info.daysToStart}</span>
+            <span class="pre-lbl">giorni</span>
           </div>
         </div>
-
-        <div class="pre-hero-row">
-          <div class="pre-count-wrap">
-            <div class="pre-ring" aria-hidden="true">
-              <svg viewBox="0 0 120 120">
-                <circle class="ring-bg" cx="60" cy="60" r="52" />
-                <circle
-                  class="ring-fg"
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  style="stroke-dasharray: 326; stroke-dashoffset: {326 - (326 * Math.min(info.daysToStart, 30)) / 30}"
-                />
-              </svg>
-            </div>
-            <div class="pre-count">
-              <span class="pre-num">{info.daysToStart}</span>
-              <span class="pre-unit">giorni alla partenza</span>
-            </div>
-          </div>
-
-          <div class="pre-col">
-            <p class="pre-depart">
-              <span class="pre-depart-ic" aria-hidden="true">✈</span>
-              Partenza {shortDate(itinerario.trip.start)}
-            </p>
-            <div class="pre-actions">
-              <button type="button" class="pre-cta primary" onclick={() => go('documenti')}>Documenti</button>
-              <button type="button" class="pre-cta ghost" onclick={() => go('logistica')}>Itinerario</button>
-            </div>
-          </div>
+        <p class="pre-date">Partenza <strong>{shortDate(itinerario.trip.start)}</strong></p>
+        <div class="pre-btns">
+          <button type="button" class="btn-fill" onclick={() => go('documenti')}>Documenti</button>
+          <button type="button" class="btn-ghost" onclick={() => go('logistica')}>Itinerario</button>
         </div>
       </div>
-    </header>
+    </section>
+
   {:else}
-    <header class="mast-panel mast-compact">
-      <div class="mast-top">
-        <div class="mast-titles">
-          <h1 class="mast-h1">Oggi</h1>
-          {#if info.phase === 'during'}
-            <span class="trip-badge live mast-inline-badge">
-              <span class="live-dot" aria-hidden="true"></span>
-              Giorno {tripDay}/{tripTotalDays}
-            </span>
-          {:else}
-            <span class="trip-badge muted-badge mast-inline-badge">Viaggio concluso</span>
-          {/if}
-        </div>
-        <div class="mast-actions">
-          <button
-            type="button"
-            class="night-toggle"
-            class:on={theme.nightMode}
-            onclick={toggleNightMode}
-            aria-pressed={theme.nightMode}
-            aria-label={theme.nightMode ? 'Disattiva modalità notte' : 'Attiva modalità notte'}
-          >
-            <span class="night-ic" aria-hidden="true">{theme.nightMode ? '🌙' : '☀️'}</span>
-          </button>
-          <time class="date-pill" datetime={info.todayIso}>{shortDate(info.todayIso)}</time>
-        </div>
-      </div>
-    </header>
-
-  {#if info.phase === 'during'}
-    <div class="progress-block" aria-label="Avanzamento viaggio: {tripPct}%">
-      <div class="progress-head">
-        <span class="progress-label">Avanzamento viaggio</span>
-        <span class="progress-pct">{tripPct}%</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:{tripPct}%"></div>
-      </div>
-      <div class="progress-labels">
-        <span>{shortDate(itinerario.trip.start)}</span>
-        <span class="progress-mid">giorno {tripDay}</span>
-        <span>{shortDate(itinerario.trip.end)}</span>
-      </div>
-    </div>
-  {/if}
-
-  <!-- ── Hero per fase ────────────────────────────────────────────── -->
-  {#if info.phase === 'after'}
-    <section class="hero hero-done card">
-      <span class="done-glyph" aria-hidden="true">✦</span>
-      <h1>Viaggio concluso</h1>
-      <p class="muted">Hai attraversato {itinerario.legs.length} tappe in {tripTotalDays} giorni.</p>
-      <button class="cta-btn" onclick={() => go('album')}>Apri l'Album ›</button>
-    </section>
-
-  {:else if city}
-    <section class="hero hero-city card" style="--accent:{accent}">
-      <div class="hero-accent" aria-hidden="true"></div>
-      <span class="hero-wm" aria-hidden="true">{city.nameLocal}</span>
-      <div class="hero-body">
-        <div class="hero-meta">
-          <span class="city-emoji" aria-hidden="true">{cityIcon}</span>
-          <span class="leg-tag">Tappa {legIndex(city.id)}</span>
-          {#if info.dayInLeg && info.legLength}
-            <span class="leg-day">giorno {info.dayInLeg} di {info.legLength}</span>
-          {/if}
-        </div>
-        <h1 class="city-name">
-          {city.name}
-          <span class="cn">{city.nameLocal}</span>
-        </h1>
-        <div class="hero-stats">
-          <span class="stat-chip">{poisOfCity(city.id).length} POI</span>
-          {#if bookings.length}<span class="stat-chip warn">{bookings.length} da prenotare</span>{/if}
-        </div>
-        <div class="hero-actions">
-          <button class="hero-cta primary" onclick={() => go('citta', city.id)}>Guida & POI</button>
-          <button class="hero-cta ghost" onclick={() => go('mappa')}>Mappa</button>
-        </div>
-      </div>
-    </section>
-  {/if}
-
-  <!-- ── Programma di oggi ───────────────────────────────────────── -->
-  {#if todayProgram}
-    <section class="block block-program">
-      <div class="block-head">
-        <h2 class="block-title">Programma di oggi</h2>
-        <span class="block-sub" class:done-chip={todayAllDone}>
-          {#if todayAllDone}
-            Tutto fatto ✓
-          {:else if todayProgram.acts.length}
-            {todayProgress}/{todayProgram.acts.length}
-          {:else}
-            Libero
-          {/if}
-        </span>
-      </div>
-      <div class="card program-card">
-        <div class="program-head">
-          <span class="program-day-title">{todayProgram.title}</span>
-        </div>
-        {#if todayProgram.acts.length}
-          <div class="program-bar" aria-hidden="true">
-            <div
-              class="program-bar-fill"
-              class:complete={todayAllDone}
-              style="width: {Math.round((todayProgress / todayProgram.acts.length) * 100)}%"
-            ></div>
-          </div>
-        {/if}
-        {#if todayProgram.acts.length === 0}
-          <p class="program-empty">Giornata libera — nessuna attività pianificata.</p>
+    <ScreenHeader seal="今" title="Oggi" compact>
+      {#snippet actions()}
+        {#if info.phase === 'during'}
+          <span class="pill live">
+            <span class="live-dot" aria-hidden="true"></span>
+            {tripDay}/{tripTotalDays}
+          </span>
         {:else}
-          <ul class="acts" class:timeline={todayProgram.acts.length > 1}>
-            {#each todayProgram.acts as act, i (act.label)}
-              {@const aid = actId(todayProgram.n, act.label)}
-              {@const done = checkedActs.has(aid)}
-              <li class="act-row" class:done>
-                <button
-                  type="button"
-                  class="act-check-btn"
-                  aria-label={done ? 'Segna da fare' : 'Segna fatto'}
-                  aria-pressed={done}
-                  onclick={() => toggleAct(todayProgram.n, act.label)}
-                >
-                  <span class="act-check" class:on={done}>{#if done}✓{/if}</span>
-                </button>
-                {#if act.poi}
-                  <button type="button" class="act act-poi" onclick={() => go('poi', act.poi!)}>
-                    <span class="act-num" aria-hidden="true">{i + 1}</span>
-                    <span class="act-label">{act.label}</span>
-                    <span class="act-chev" aria-hidden="true">›</span>
-                  </button>
-                {:else}
-                  <div class="act act-plain">
-                    <span class="act-num" aria-hidden="true">{i + 1}</span>
-                    <span class="act-label">{act.label}</span>
-                  </div>
-                {/if}
-              </li>
-            {/each}
-          </ul>
+          <span class="pill">Concluso</span>
         {/if}
-        <button class="program-link" onclick={() => go('logistica')}>Vedi tutto il viaggio ›</button>
-      </div>
-    </section>
-  {/if}
+        <time class="pill muted" datetime={info.todayIso}>{shortDate(info.todayIso)}</time>
+      {/snippet}
+    </ScreenHeader>
 
+    {#if info.phase === 'during'}
+      <div class="trip-bar" aria-label="Avanzamento {tripPct}%">
+        <div class="trip-fill" style="width:{tripPct}%"></div>
+      </div>
+    {/if}
+
+    {#if info.phase === 'after'}
+      <section class="done card">
+        <span class="done-seal" aria-hidden="true">✦</span>
+        <h2 class="done-h">Viaggio concluso</h2>
+        <p class="done-p">{itinerario.legs.length} tappe · {tripTotalDays} giorni</p>
+        <button type="button" class="btn-fill" onclick={() => go('album')}>Apri Album</button>
+      </section>
+
+    {:else if city && theme}
+      <section class="city card" style="--accent:{accent}">
+        <div class="city-cover">
+          <img src={coverSrc} alt="" loading="lazy" decoding="async" />
+          <div class="city-scrim" aria-hidden="true"></div>
+          <div class="city-line" aria-hidden="true"></div>
+          <span class="city-wm" aria-hidden="true">{city.nameLocal}</span>
+          <div class="city-titles">
+            <span class="city-tag">Tappa {legIndex(city.id)}</span>
+            <h2 class="city-name">{city.name}</h2>
+            <span class="city-cn">{city.nameLocal}</span>
+          </div>
+        </div>
+        <div class="city-foot">
+          {#if bookings.length}
+            <span class="city-warn">{bookings.length} da prenotare</span>
+          {/if}
+          <div class="city-btns">
+            <button type="button" class="btn-fill sm" onclick={() => go('citta', city.id)}>Guida</button>
+            <button type="button" class="btn-ghost sm" onclick={() => go('mappa')}>Mappa</button>
+          </div>
+        </div>
+      </section>
+
+      {#if todayProgram}
+        <section class="program card">
+          <div class="program-head">
+            <h3 class="program-title">{todayProgram.title}</h3>
+            <span class="program-stat" class:ok={todayAllDone}>
+              {#if todayAllDone}
+                Fatto
+              {:else if todayProgram.acts.length}
+                {todayProgress}/{todayProgram.acts.length}
+              {:else}
+                Libero
+              {/if}
+            </span>
+          </div>
+
+          {#if todayProgram.acts.length}
+            <div class="program-track" aria-hidden="true">
+              <div
+                class="program-fill"
+                class:ok={todayAllDone}
+                style="width:{Math.round((todayProgress / todayProgram.acts.length) * 100)}%"
+              ></div>
+            </div>
+            <ul class="acts">
+              {#each visibleActs as act, i (act.label)}
+                {@const done = checkedActs.has(actId(todayProgram.n, act.label))}
+                <li class="act" class:done>
+                  <button
+                    type="button"
+                    class="check"
+                    class:on={done}
+                    aria-label={done ? 'Segna da fare' : 'Segna fatto'}
+                    aria-pressed={done}
+                    onclick={() => toggleAct(todayProgram.n, act.label)}
+                  >{#if done}✓{/if}</button>
+                  {#if act.poi}
+                    <button type="button" class="act-body" onclick={() => go('poi', act.poi!)}>
+                      <span class="act-n">{i + 1}</span>
+                      <span class="act-txt">{act.label}</span>
+                      <span class="act-go" aria-hidden="true">›</span>
+                    </button>
+                  {:else}
+                    <div class="act-body plain">
+                      <span class="act-n">{i + 1}</span>
+                      <span class="act-txt">{act.label}</span>
+                    </div>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+            {#if moreActs > 0}
+              <button type="button" class="program-more" onclick={() => go('logistica')}>
+                +{moreActs} attività · Itinerario ›
+              </button>
+            {:else}
+              <button type="button" class="program-more" onclick={() => go('logistica')}>
+                Itinerario completo ›
+              </button>
+            {/if}
+          {:else}
+            <p class="program-free">Giornata libera</p>
+          {/if}
+        </section>
+      {/if}
+    {/if}
   {/if}
 
   {#if nt}
-    <section class="block block-tight">
-      <div class="block-head">
-        <h2 class="block-title">Prossimo spostamento</h2>
-        {#if info.daysToNextTransport !== undefined}
-          <span class="block-when">
-            {info.daysToNextTransport === 0 ? 'Oggi' : `Tra ${info.daysToNextTransport} gg`}
-          </span>
-        {/if}
+    <button type="button" class="move card accent-card card-interactive" onclick={() => go('logistica')}>
+      <div class="move-body">
+        <span class="move-lbl">Prossimo spostamento</span>
+        <span class="move-route">{nt.from} → {nt.to}</span>
+        <span class="move-meta">
+          {typeLabel[nt.type]}
+          · {shortDate(nt.departAt)}
+          {#if hhmm(nt.departAt)} · {hhmm(nt.departAt)}{/if}
+        </span>
       </div>
-      <button
-        type="button"
-        class="card transport-card accent-card card-interactive"
-        onclick={() => go('logistica')}
-      >
-        <span class="transport-icon" aria-hidden="true">{typeIcon[nt.type] ?? '→'}</span>
-        <div class="transport-body">
-          <div class="transport-route">
-            <span class="tag-pill">{typeLabel[nt.type]}</span>
-            <span class="transport-dest">{nt.from} → {nt.to}</span>
-          </div>
-          <div class="transport-meta">
-            <span>{nt.code}</span>
-            {#if !nt.confirmed}<span class="warn-tag">da prenotare</span>{/if}
-            <span class="sep">·</span>
-            <span>{shortDate(nt.departAt)}</span>
-            {#if hhmm(nt.departAt)}<span class="sep">·</span><span>{hhmm(nt.departAt)}</span>{/if}
-          </div>
-        </div>
-        <span class="transport-chev" aria-hidden="true">›</span>
-      </button>
-    </section>
+      <span class="move-go" aria-hidden="true">›</span>
+    </button>
   {/if}
 
-  <!-- ── Dove dormiamo (solo in viaggio) ───────────────────────────── -->
-  {#if hasStayTonight}
-    <section class="block">
-      <div class="block-head">
-        <h2 class="block-title">Dove dormiamo</h2>
-        {#if !alloggio!.confirmed}<span class="block-when">Da confermare</span>{/if}
-      </div>
-      <div class="card stay-card accent-card">
-        <div class="stay-top">
-          <span class="stay-icon" aria-hidden="true">🏨</span>
-          <div class="stay-info">
-            <b>{alloggio!.name}</b>
-            {#if alloggio!.address}<p class="stay-addr">{alloggio!.address}</p>{/if}
-          </div>
-        </div>
-        <div class="stay-dates">
-          <span>Check-in {shortDate(alloggio!.checkIn)}</span>
-          <span class="sep">→</span>
-          <span>Check-out {shortDate(alloggio!.checkOut)}</span>
-        </div>
-        {#if alloggio!.addressLocal}
-          <button
-            type="button"
-            class="stay-zh"
-            onclick={() => go('frasario')}
-            title="Apri nel frasario"
-          >
-            <span class="zh">{alloggio!.addressLocal}</span>
-            <span class="zh-hint">Mostra al tassista ›</span>
-          </button>
-        {/if}
-      </div>
-    </section>
-  {/if}
-
-  <!-- ── Prenotazioni obbligatorie ─────────────────────────────────── -->
-  {#if info.phase === 'during' && bookings.length}
-    <section class="block">
-      <div class="block-head">
-        <h2 class="block-title">Da prenotare</h2>
-        <span class="block-sub">{bookings.length} attività</span>
-      </div>
-      <div class="card bookings-card">
-        {#each bookings as p (p.id)}
-          <button class="booking-row" onclick={() => go('poi', p.id)}>
-            <span class="booking-star" aria-hidden="true">★</span>
-            <span class="booking-main">
-              <b>{p.name}</b>
-              <span class="muted booking-note">{p.booking}</span>
-            </span>
-            <span class="booking-chev" aria-hidden="true">›</span>
-          </button>
-        {/each}
-      </div>
-    </section>
-  {/if}
-
-  <section class="block tools-block">
-    <div class="block-head">
-      <h2 class="block-title">Strumenti</h2>
-    </div>
-    <div class="tools-grid">
+  <section class="tools">
+    <h2 class="tools-h">Strumenti</h2>
+    <div class="shortcut-grid">
       {#each shortcuts as s (s.route)}
-        <button class="tool hue-{s.hue} pressable" onclick={() => go(s.route)}>
-          <span class="tool-icon">
-            <ShortcutIcon id={s.route} size={19} />
-          </span>
-          <span class="tool-label">{s.label}</span>
-          <span class="tool-desc">{s.desc}</span>
+        <button type="button" class="shortcut-btn hue-{s.hue} pressable" onclick={() => go(s.route)}>
+          <span class="sc-icon"><ShortcutIcon id={s.route} size={20} /></span>
+          <span class="sc-label">{s.label}</span>
+          <span class="sc-desc">{s.desc}</span>
         </button>
       {/each}
     </div>
@@ -408,82 +275,134 @@
   .oggi {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    padding-bottom: 8px;
+    gap: 12px;
+    padding-bottom: 12px;
   }
-  /* ── Pre-partenza ── */
-  .pre-launch {
-    position: relative;
-    margin-bottom: 14px;
-    padding: 0;
-    overflow: hidden;
-    background: linear-gradient(
-      168deg,
-      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
-      var(--surface) 45%,
-      color-mix(in srgb, var(--surface) 94%, var(--paper)) 100%
-    );
-    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
-    box-shadow: var(--shadow-md), 0 0 40px rgba(232, 72, 40, 0.1);
-    animation: rise 0.45s var(--ease) both;
-  }
-  .pre-accent {
-    height: 4px;
-    background: linear-gradient(90deg, var(--cinabro-bright), var(--gold), color-mix(in srgb, var(--cinabro) 20%, transparent));
-    box-shadow: 0 2px 14px var(--cinabro-glow);
-  }
-  .pre-inner {
-    position: relative;
-    z-index: 1;
-    padding: 14px 16px 16px;
-  }
-  .pre-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .pre-today {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-body);
-  }
-  .pre-tag {
+
+  /* Pills header */
+  .pill {
     font-family: var(--mono);
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-    border: 1px solid rgba(232, 72, 40, 0.28);
+    padding: 5px 10px;
     border-radius: var(--radius-pill);
-    padding: 4px 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-2);
+    color: var(--ink-soft);
   }
-  .pre-hero-row {
-    display: flex;
+  .pill.live {
+    display: inline-flex;
     align-items: center;
-    gap: 16px;
+    gap: 6px;
+    color: var(--accent, var(--cinabro-bright));
+    background: color-mix(in srgb, var(--accent, var(--cinabro)) 12%, transparent);
+    border-color: color-mix(in srgb, var(--accent, var(--cinabro)) 28%, transparent);
   }
-  .pre-count-wrap {
+  .pill.muted { color: var(--ink-faint); }
+  .live-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent, var(--cinabro-bright));
+    box-shadow: 0 0 6px color-mix(in srgb, var(--accent, var(--cinabro)) 50%, transparent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .trip-bar {
+    height: 3px;
+    margin: -4px 0 2px;
+    border-radius: var(--radius-pill);
+    background: var(--line);
+    overflow: hidden;
+  }
+  .trip-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent, var(--cinabro)), var(--jade));
+    border-radius: inherit;
+    transition: width 0.45s var(--ease);
+  }
+
+  /* Buttons */
+  .btn-fill, .btn-ghost {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    transition: transform 0.15s var(--ease);
+  }
+  .btn-fill:active, .btn-ghost:active { transform: scale(0.97); }
+  .btn-fill {
+    color: #fff;
+    background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
+    border: 1px solid color-mix(in srgb, var(--cinabro) 40%, transparent);
+    box-shadow: 0 4px 14px var(--cinabro-glow);
+  }
+  .btn-fill.sm {
+    background: linear-gradient(135deg, var(--accent, var(--cinabro-bright)), var(--accent, var(--cinabro)));
+    border-color: color-mix(in srgb, var(--accent, var(--cinabro)) 40%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--accent, var(--cinabro)) 30%, transparent);
+  }
+  .btn-ghost {
+    color: var(--ink-soft);
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+  }
+
+  /* Pre-partenza */
+  .pre {
     position: relative;
-    flex: none;
-    width: 112px;
-    height: 112px;
+    overflow: hidden;
+    padding: 0;
+    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
+    background: linear-gradient(
+      168deg,
+      color-mix(in srgb, var(--cinabro) 9%, var(--surface-hi)) 0%,
+      var(--surface) 100%
+    );
+    box-shadow: var(--shadow-md), 0 0 36px color-mix(in srgb, var(--cinabro) 10%, transparent);
+  }
+  .pre-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--cinabro-bright), var(--gold), transparent);
+    box-shadow: 0 2px 12px var(--cinabro-glow);
+  }
+  .pre-wm {
+    position: absolute;
+    right: 8px;
+    top: 20px;
+    font-family: var(--hanzi);
+    font-size: 4.5rem;
+    font-weight: 600;
+    line-height: 1;
+    color: color-mix(in srgb, var(--cinabro) 12%, transparent);
+    pointer-events: none;
+    user-select: none;
+  }
+  .pre-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding: 20px 18px 22px;
+  }
+  .pre-ring-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
   }
   .pre-ring {
-    position: absolute;
-    inset: 0;
-  }
-  .pre-ring svg {
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
-    filter: drop-shadow(0 4px 14px rgba(232, 72, 40, 0.25));
   }
   .ring-bg { fill: none; stroke: var(--line-strong); stroke-width: 4; }
   .ring-fg {
@@ -503,1080 +422,367 @@
   }
   .pre-num {
     font-family: var(--serif);
-    font-size: 2.75rem;
+    font-size: 2.4rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.03em;
-    background: linear-gradient(180deg, var(--ink) 30%, var(--cinabro-bright) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--ink);
   }
-  .pre-unit {
+  .pre-lbl {
     font-family: var(--mono);
-    font-size: 7px;
+    font-size: 8px;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    max-width: 72px;
-    line-height: 1.35;
-    text-align: center;
-  }
-  .pre-col {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .pre-depart {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--ink-soft);
-    margin: 0;
-  }
-  .pre-depart-ic { font-size: 0.95rem; line-height: 1; }
-  .pre-actions {
-    display: flex;
-    gap: 8px;
-  }
-  .pre-cta {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    flex: 1;
-    min-width: 0;
-    transition: transform 0.15s var(--ease);
-  }
-  .pre-cta:active { transform: scale(0.97); }
-  .pre-cta.primary {
-    color: #fff;
-    background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
-    border: 1px solid rgba(232, 72, 40, 0.4);
-    box-shadow: 0 4px 14px var(--cinabro-glow);
-  }
-  .pre-cta.ghost {
-    color: var(--ink-soft);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-  }
-
-  /* ── Masthead panel ── */
-  .mast-panel {
-    margin-bottom: 14px;
-    padding: 12px 16px 14px;
-    background: linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 55%, color-mix(in srgb, var(--surface) 92%, var(--paper)) 100%);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    position: relative;
-    overflow: hidden;
-  }
-  .mast-panel::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 14%;
-    right: 14%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    pointer-events: none;
-  }
-  .mast-deco {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .mast-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      var(--line-strong) 25%,
-      color-mix(in srgb, var(--cinabro) 25%, transparent) 50%,
-      var(--line-strong) 75%,
-      transparent
-    );
-  }
-  .mast-seal {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
-    font-family: var(--hanzi);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-    border: 1px solid rgba(232, 72, 40, 0.28);
-    border-radius: 6px;
-    box-shadow: 0 0 14px var(--cinabro-glow);
-  }
-  .mast-top {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 14px;
-  }
-  .mast-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    flex: none;
-  }
-  .pre-meta-end {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .night-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex: none;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line-strong);
-    background: var(--paper-2);
-    color: var(--ink-body);
-    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
-  }
-  .night-toggle.on {
-    background: color-mix(in srgb, var(--gold) 18%, var(--paper-2));
-    border-color: color-mix(in srgb, var(--gold) 45%, var(--line-strong));
-    box-shadow: 0 2px 10px var(--gold-soft);
-  }
-  .night-toggle:active { transform: scale(0.94); }
-  .night-ic { font-size: 1.05rem; line-height: 1; }
-  .mast-titles { min-width: 0; }
-  .mast-compact {
-    border-radius: var(--radius-md);
-  }
-  .mast-compact .mast-titles {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .mast-inline-badge {
-    align-self: flex-start;
-    padding: 3px 9px;
-    font-size: 9px;
-  }
-  .mast-h1 {
-    font-family: var(--serif);
-    font-size: 2.05rem;
-    line-height: 1.05;
-    letter-spacing: -0.025em;
-    margin: 0;
-    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-soft) 85%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .mast-foot { margin-top: 14px; }
-  .date-pill {
-    flex: none;
-    max-width: 48%;
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-body);
-    text-align: right;
-    line-height: 1.45;
-    padding: 6px 10px;
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-  }
-  .trip-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-    border: 1px solid rgba(232, 72, 40, 0.28);
-    border-radius: var(--radius-pill);
-    padding: 5px 12px;
-    box-shadow: 0 2px 10px rgba(232, 72, 40, 0.12);
-  }
-  .trip-badge.live {
-    color: var(--accent, var(--cinabro-bright));
-    background: color-mix(in srgb, var(--accent, var(--cinabro)) 14%, transparent);
-    border-color: color-mix(in srgb, var(--accent, var(--cinabro)) 32%, transparent);
-    box-shadow: 0 2px 12px color-mix(in srgb, var(--accent, var(--cinabro)) 18%, transparent);
-  }
-  .live-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent, var(--cinabro-bright));
-    box-shadow: 0 0 8px color-mix(in srgb, var(--accent, var(--cinabro)) 60%, transparent);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.55; transform: scale(0.88); }
-  }
-  .muted-badge {
-    color: var(--ink-faint);
-    background: var(--paper-2);
-    border-color: var(--line-strong);
-    box-shadow: none;
-  }
-
-  /* ── Progress ── */
-  .progress-block {
-    margin-bottom: 14px;
-    padding: 12px 14px;
-    background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-  }
-  .progress-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .progress-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-  .progress-pct {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent, var(--cinabro-bright));
-  }
-  .progress-track {
-    height: 3px;
-    border-radius: var(--radius-pill);
-    background: var(--line);
-    overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(
-      90deg,
-      var(--accent, var(--cinabro)),
-      color-mix(in srgb, var(--accent, var(--cinabro-bright)) 70%, var(--gold))
-    );
-    transition: width 0.5s var(--ease);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--accent, var(--cinabro)) 45%, transparent);
-    position: relative;
-  }
-  .progress-fill::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 55%);
-    border-radius: inherit;
-  }
-  .progress-labels {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 5px;
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--ink-faint);
-    letter-spacing: 0.04em;
-  }
-  .progress-mid {
-    color: var(--ink-body);
-    font-weight: 600;
-    font-size: 10px;
-  }
-
-  /* ── Hero variants ── */
-  .hero {
-    margin-bottom: 14px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-md);
-  }
-  .cta-btn {
-    display: inline-flex;
-    align-items: center;
-    margin-top: 16px;
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: #fff;
-    background: linear-gradient(135deg, var(--cinabro-bright), var(--cinabro));
-    border: 1px solid rgba(232, 72, 40, 0.4);
-    border-radius: var(--radius-sm);
-    padding: 11px 18px;
-    box-shadow: 0 4px 14px var(--cinabro-glow);
-    transition: transform 0.15s var(--ease);
-  }
-  .cta-btn:active { transform: scale(0.97); }
-
-  /* Done */
-  .hero-done {
-    text-align: center;
-    padding: 36px 24px;
-    background: linear-gradient(
-      168deg,
-      color-mix(in srgb, var(--gold-soft) 40%, var(--surface-hi)) 0%,
-      var(--surface) 100%
-    );
-  }
-  .done-glyph {
-    font-size: 2.4rem;
-    color: var(--gold);
-    display: block;
-    margin-bottom: 12px;
-    text-shadow: 0 0 24px rgba(228, 176, 74, 0.4);
-  }
-  .hero-done h1 { font-size: 1.8rem; margin-bottom: 8px; }
-  .hero-done .muted { font-size: 0.95rem; }
-
-  /* City */
-  .hero-city {
-    padding: 0;
-    background: linear-gradient(
-      168deg,
-      color-mix(in srgb, var(--surface-hi) 82%, var(--accent)) 0%,
-      var(--surface) 42%,
-      color-mix(in srgb, var(--surface) 94%, var(--paper)) 100%
-    );
-    box-shadow:
-      var(--shadow-md),
-      0 0 48px color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  .hero-city::before {
-    content: '';
-    position: absolute;
-    top: -30px;
-    right: -30px;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-wm {
-    position: absolute;
-    right: 6px;
-    top: 8px;
-    font-family: var(--hanzi);
-    font-size: 3.2rem;
-    font-weight: 600;
-    line-height: 1;
-    color: color-mix(in srgb, var(--accent) 11%, transparent);
-    pointer-events: none;
-    user-select: none;
-    z-index: 0;
-  }
-  .hero-accent {
-    height: 4px;
-    background: linear-gradient(
-      90deg,
-      var(--accent),
-      color-mix(in srgb, var(--accent) 50%, var(--cinabro-bright)),
-      color-mix(in srgb, var(--accent) 20%, transparent)
-    );
-    box-shadow: 0 2px 16px color-mix(in srgb, var(--accent) 40%, transparent);
-  }
-  .hero-body {
-    padding: 16px 18px 18px;
-    position: relative;
-    z-index: 1;
-  }
-  .hero-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .city-emoji {
-    font-size: 1.15rem;
-    line-height: 1;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
-  }
-  .leg-tag {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
-    border-radius: var(--radius-pill);
-    padding: 4px 10px;
+    color: var(--ink-faint);
   }
-  .leg-day {
+  .pre-date {
     font-family: var(--mono);
     font-size: 10px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .pre-date strong { color: var(--ink); }
+  .pre-btns {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 260px;
+  }
+  .pre-btns .btn-fill,
+  .pre-btns .btn-ghost { flex: 1; }
+
+  /* Viaggio concluso */
+  .done {
+    text-align: center;
+    padding: 28px 20px;
+  }
+  .done-seal {
+    font-size: 1.5rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .done-h {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    margin: 10px 0 4px;
+    color: var(--ink);
+  }
+  .done-p {
+    font-size: 0.88rem;
     color: var(--ink-faint);
+    margin: 0 0 16px;
+  }
+
+  /* Città hero */
+  .city {
+    padding: 0;
+    overflow: hidden;
+    border-color: color-mix(in srgb, var(--accent) 26%, var(--line-strong));
+    box-shadow:
+      var(--shadow-md),
+      0 16px 40px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .city-cover {
+    position: relative;
+    height: 132px;
+    overflow: hidden;
+  }
+  .city-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(1.15) contrast(1.05);
+  }
+  .city-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(125deg, color-mix(in srgb, var(--accent) 15%, #000) 0%, transparent 45%),
+      linear-gradient(180deg, transparent 20%, color-mix(in srgb, #000 75%, transparent) 100%);
+  }
+  .city-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    box-shadow: 0 -6px 20px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .city-wm {
+    position: absolute;
+    right: 4px;
+    top: 0;
+    font-family: var(--hanzi);
+    font-size: 4rem;
+    font-weight: 600;
+    line-height: 1;
+    color: color-mix(in srgb, #fff 8%, var(--accent));
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+  }
+  .city-titles {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    z-index: 2;
+  }
+  .city-tag {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, #fff 90%, var(--accent));
+    opacity: 0.9;
   }
   .city-name {
     font-family: var(--serif);
-    font-size: 1.85rem;
-    line-height: 1.1;
-    margin-bottom: 8px;
-    letter-spacing: -0.015em;
-    max-width: 82%;
+    font-size: 1.65rem;
+    font-weight: 600;
+    line-height: 1.05;
+    color: #fff;
+    margin: 4px 0 0;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
   }
-  .city-name .cn {
+  .city-cn {
     display: block;
     font-family: var(--hanzi);
-    font-size: 1.45rem;
-    font-weight: 500;
-    color: var(--accent);
-    margin-top: 2px;
-    text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 38%, transparent);
+    font-size: 1.1rem;
+    color: color-mix(in srgb, #fff 85%, var(--accent));
+    text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
   }
-  .intro-wrap {
-    position: relative;
-    padding-left: 14px;
-    margin-bottom: 12px;
-    max-width: 92%;
-  }
-  .intro-wrap::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 3px;
-    bottom: 3px;
-    width: 3px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 40%, transparent));
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
-  }
-  .city-intro {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin: 0;
-  }
-  .hero-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 0;
-  }
-  .stat-chip {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-    border-radius: var(--radius-pill);
-    padding: 4px 10px;
-  }
-  .stat-chip.warn {
-    color: var(--gold);
-    background: var(--gold-soft);
-    border-color: color-mix(in srgb, var(--gold) 30%, transparent);
-  }
-  .hero-actions {
+  .city-foot {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px 12px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, var(--surface)) 0%, var(--surface) 100%);
   }
-  .hero-cta {
+  .city-warn {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 8px;
     font-weight: 600;
-    letter-spacing: 0.03em;
-    border-radius: var(--radius-sm);
-    padding: 10px 16px;
-    transition: transform 0.15s var(--ease), box-shadow 0.15s;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--cinabro-bright);
   }
-  .hero-cta:active { transform: scale(0.97); }
-  .hero-cta.primary {
-    color: #fff;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent) 88%, #fff),
-      var(--accent)
-    );
-    border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+  .city-btns {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
   }
-  .hero-cta.ghost {
-    color: var(--ink-soft);
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
+  .city-btns .btn-fill.sm,
+  .city-btns .btn-ghost.sm {
+    padding: 7px 12px;
+    font-size: 9px;
   }
 
-  /* ── Blocks ── */
-  .block { margin-bottom: 14px; }
-  .block-tight { margin-bottom: 12px; }
-  .block-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-    padding-left: 2px;
+  /* Programma */
+  .program {
+    padding: 14px 14px 12px;
+    border-color: color-mix(in srgb, var(--accent, var(--line-strong)) 20%, var(--line-strong));
   }
-  .block-title {
-    font-family: var(--serif);
-    font-size: 1.1rem;
+  .program-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .program-title {
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--ink);
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1.3;
   }
-  .block-title::before {
-    content: '';
-    width: 3px;
-    height: 0.95em;
-    border-radius: 2px;
-    background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
-    box-shadow: 0 0 8px var(--cinabro-glow);
+  .program-stat {
     flex: none;
-  }
-  .block-sub, .block-when {
     font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     color: var(--ink-faint);
-    letter-spacing: 0.03em;
+    padding: 4px 8px;
+    border-radius: var(--radius-pill);
     background: var(--paper-2);
     border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    padding: 3px 10px;
   }
-  .block-when {
-    color: var(--cinabro-bright);
-    border-color: rgba(232, 72, 40, 0.22);
-    background: var(--cinabro-soft);
-  }
-
-  .block-sub.done-chip,
-  .done-chip {
+  .program-stat.ok {
     color: var(--jade-bright);
     background: var(--jade-soft);
     border-color: color-mix(in srgb, var(--jade) 35%, transparent);
   }
-
-  /* Program */
-  .block-program .program-card {
-    padding: 0;
-    overflow: hidden;
-    border-color: color-mix(in srgb, var(--accent, var(--line-strong)) 35%, var(--line-strong));
-    box-shadow: var(--shadow-md), 0 0 32px color-mix(in srgb, var(--accent, var(--cinabro)) 8%, transparent);
-  }
-  .program-head {
-    padding: 10px 14px 8px;
-    border-bottom: 1px solid var(--line);
-    background: linear-gradient(160deg, color-mix(in srgb, var(--accent, var(--surface-hi)) 8%, var(--surface-hi)) 0%, var(--surface) 100%);
-  }
-  .program-day-title {
-    display: block;
-    font-family: var(--serif);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--ink);
-    letter-spacing: -0.01em;
-    line-height: 1.25;
-  }
-  .program-card .program-bar {
-    margin: 10px 14px 0;
-  }
-  .program-card .acts,
-  .program-card .program-empty {
-    margin: 10px 14px 0;
-  }
-  .program-bar-fill.complete {
-    background: linear-gradient(90deg, var(--jade), var(--jade-bright));
-    box-shadow: 0 0 12px var(--jade-soft);
-  }
-  .program-bar {
+  .program-track {
     height: 3px;
     border-radius: var(--radius-pill);
     background: var(--line);
-    margin-bottom: 14px;
     overflow: hidden;
+    margin-bottom: 10px;
   }
-  .program-bar-fill {
+  .program-fill {
     height: 100%;
+    background: var(--accent, var(--cinabro));
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--accent, var(--cinabro)), var(--jade-bright));
     transition: width 0.35s var(--ease);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--cinabro)) 40%, transparent);
   }
-  .program-empty {
-    font-size: 0.92rem;
-    color: var(--ink-faint);
-    font-style: italic;
-    padding: 12px 14px;
-    text-align: center;
-    background: var(--paper-2);
-    border: 1px dashed var(--line-strong);
-    border-radius: var(--radius-sm);
-  }
+  .program-fill.ok { background: var(--jade); }
   .acts {
     list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    position: relative;
-  }
-  .acts.timeline::before {
-    content: '';
-    position: absolute;
-    left: 24px;
-    top: 28px;
-    bottom: 28px;
-    width: 2px;
-    border-radius: 1px;
-    background: linear-gradient(
-      180deg,
-      var(--accent, var(--line-strong)),
-      color-mix(in srgb, var(--accent, var(--line)) 40%, var(--line))
-    );
-    opacity: 0.45;
-    z-index: 0;
-  }
-  .act-row {
-    display: flex;
-    align-items: stretch;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    border: 1px solid var(--line-strong);
-    background: linear-gradient(155deg, var(--paper-2) 0%, var(--surface) 100%);
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.15s var(--ease), border-color 0.15s;
-    position: relative;
-    z-index: 1;
-  }
-  .act-row:active { transform: scale(0.995); }
-  .act-row.done { opacity: 0.68; }
-  .act-check-btn {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 42px;
-    border-right: 1px solid var(--line);
-    background: color-mix(in srgb, var(--accent, var(--jade)) 6%, var(--surface));
-  }
-  .act-check {
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 7px;
-    border: 2px solid color-mix(in srgb, var(--accent, var(--jade)) 65%, var(--line-strong));
-    background: color-mix(in srgb, var(--accent, var(--jade)) 10%, transparent);
-    font-size: 13px;
-    font-weight: 700;
-    color: #fff;
-    transition: background 0.18s, border-color 0.18s, transform 0.15s;
-  }
-  .act-check.on {
-    background: var(--jade);
-    border-color: var(--jade);
-    box-shadow: 0 2px 8px var(--jade-soft);
-    animation: checkPop 0.28s var(--ease) both;
-  }
-  @keyframes checkPop {
-    0% { transform: scale(0.7); }
-    60% { transform: scale(1.12); }
-    100% { transform: scale(1.05); }
+    gap: 4px;
   }
   .act {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .check {
+    flex: none;
+    width: 32px;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: transparent;
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .check.on {
+    color: #fff;
+    background: var(--jade);
+    border-color: var(--jade);
+  }
+  .act-body {
     flex: 1;
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    padding: 8px 10px;
     text-align: left;
-    padding: 10px 12px 10px 2px;
-    border: none;
-    background: transparent;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
   }
-  .act-poi:active { background: color-mix(in srgb, var(--accent, var(--cinabro)) 8%, var(--paper-2)); }
-  .act-row.done .act-label {
+  .act-body.plain { background: transparent; border-color: transparent; }
+  button.act-body:active { background: color-mix(in srgb, var(--accent, var(--cinabro)) 8%, var(--paper-2)); }
+  .act.done .act-txt {
     text-decoration: line-through;
-    text-decoration-color: color-mix(in srgb, var(--jade) 50%, transparent);
     color: var(--ink-faint);
-    transition: color 0.25s, text-decoration-color 0.25s;
   }
-  .act-num {
+  .act-n {
     flex: none;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     display: grid;
     place-items: center;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: var(--accent, var(--ink-faint));
-    background: color-mix(in srgb, var(--accent, var(--paper-2)) 12%, var(--paper-2));
+    background: color-mix(in srgb, var(--accent, var(--paper-2)) 10%, var(--paper-2));
     border-radius: 50%;
-    border: 1px solid color-mix(in srgb, var(--accent, var(--line-strong)) 35%, var(--line-strong));
+    border: 1px solid color-mix(in srgb, var(--accent, var(--line)) 30%, var(--line));
   }
-  .act-label {
+  .act-txt {
     flex: 1;
+    font-size: 0.88rem;
     font-weight: 500;
-    font-size: 0.94rem;
     color: var(--ink);
-    line-height: 1.38;
-    letter-spacing: 0.01em;
+    line-height: 1.3;
   }
-  .act-chev {
+  .act-go {
     color: var(--accent, var(--cinabro-bright));
-    font-size: 1.25rem;
-    flex: none;
-    opacity: 0.85;
+    font-size: 1.1rem;
   }
-  .program-link {
+  .program-more {
     display: block;
     width: 100%;
-    margin-top: 10px;
-    padding: 10px 14px;
-    border-top: 1px solid var(--line);
+    margin-top: 8px;
+    padding: 8px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--ink-faint);
     text-align: center;
-    background: var(--paper-2);
-    transition: color 0.15s, background 0.15s;
   }
-  .program-link:active {
-    color: var(--accent, var(--cinabro-bright));
-    background: color-mix(in srgb, var(--accent, var(--cinabro)) 8%, var(--paper-2));
-  }
-
-  .sep { opacity: 0.35; }
-
-  /* Transport */
-  button.transport-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    text-align: left;
-    padding: 16px 18px 16px 22px;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--cinabro) 10%, var(--surface-hi)) 0%,
-      var(--surface) 100%
-    );
-    border-color: color-mix(in srgb, var(--cinabro) 22%, var(--line-strong));
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .transport-card.accent-card::before {
-    background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
-    box-shadow: 0 0 10px var(--cinabro-glow);
-  }
-  .transport-icon {
-    flex: none;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    font-size: 1.35rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--line-strong);
-    border-radius: 12px;
-    line-height: 1;
-  }
-  .transport-body { flex: 1; min-width: 0; }
-  .transport-route {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 0.96rem;
-  }
-  .transport-dest {
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .transport-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;
-    margin-top: 7px;
-    font-family: var(--mono);
-    font-size: 10px;
+  .program-free {
+    font-size: 0.88rem;
     color: var(--ink-faint);
-    letter-spacing: 0.02em;
-  }
-  .transport-chev {
-    color: var(--cinabro-bright);
-    font-size: 1.4rem;
-    flex: none;
-    opacity: 0.8;
+    margin: 0;
+    padding: 8px 0;
   }
 
-  /* Stay */
-  .accent-card {
-    position: relative;
-    overflow: hidden;
-  }
-  .accent-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 12px;
-    bottom: 12px;
-    width: 3px;
-    border-radius: 0 2px 2px 0;
-    background: linear-gradient(180deg, var(--accent, var(--jade-bright)), color-mix(in srgb, var(--accent, var(--jade)) 50%, transparent));
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--jade)) 30%, transparent);
-  }
-  .stay-card {
-    padding: 12px 14px 12px 18px;
-    background: linear-gradient(160deg, var(--surface-hi) 0%, var(--surface) 100%);
-  }
-  .stay-top { display: flex; align-items: flex-start; gap: 14px; }
-  .stay-icon {
-    flex: none;
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
-    font-size: 1.25rem;
-    background: var(--jade-soft);
-    border: 1px solid color-mix(in srgb, var(--jade) 28%, transparent);
-    border-radius: 12px;
-    line-height: 1;
-  }
-  .stay-info { flex: 1; min-width: 0; }
-  .stay-info b {
-    font-family: var(--serif);
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .stay-addr {
-    font-size: 0.82rem;
-    margin-top: 4px;
-    line-height: 1.45;
-    color: var(--ink-body);
-  }
-  .stay-dates {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line);
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--ink-faint);
-    letter-spacing: 0.02em;
-  }
-  .stay-zh {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    margin-top: 12px;
-    padding: 12px 16px;
-    background: var(--paper-2);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    text-align: left;
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .stay-zh:active {
-    border-color: var(--jade);
-    background: color-mix(in srgb, var(--jade) 6%, var(--paper-2));
-  }
-  .zh {
-    font-family: var(--hanzi);
-    font-size: 1.15rem;
-    color: var(--ink);
-  }
-  .zh-hint {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--jade-bright);
-    white-space: nowrap;
-  }
-
-  .warn-tag {
-    color: var(--gold);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 9px;
-    background: var(--gold-soft);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  /* Bookings */
-  .bookings-card { padding: 6px 18px; }
-  .booking-row {
+  /* Trasporto */
+  .move {
     display: flex;
     align-items: center;
     gap: 12px;
     width: 100%;
+    padding: 12px 14px 12px 18px;
     text-align: left;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
-    transition: opacity 0.15s;
   }
-  .booking-row:active { opacity: 0.75; }
-  .booking-row:last-child { border-bottom: none; }
-  .booking-star {
-    flex: none;
-    width: 32px;
-    height: 32px;
-    display: grid;
-    place-items: center;
-    color: var(--gold);
-    font-size: 14px;
-    background: var(--gold-soft);
-    border-radius: 8px;
-    border: 1px solid color-mix(in srgb, var(--gold) 25%, transparent);
-  }
-  .booking-main { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-  .booking-main b {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .booking-note {
-    font-size: 0.78rem;
-    color: var(--ink-body);
-    line-height: 1.35;
-  }
-  .booking-chev {
-    color: var(--ink-faint);
-    font-size: 1.25rem;
-    flex: none;
-  }
-
-  /* Tools */
-  .tools-block { margin-bottom: 0; }
-  .tools-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-  .tool {
+  .move-body {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 12px 6px 11px;
-    min-height: 0;
-    background: linear-gradient(165deg, var(--surface-hi) 0%, var(--surface) 55%, color-mix(in srgb, var(--surface) 90%, var(--paper)) 100%);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.18s var(--ease), border-color 0.18s, box-shadow 0.18s;
+    gap: 3px;
   }
-  .tool::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 20%;
-    right: 20%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
-    pointer-events: none;
-  }
-  .tool:active {
-    transform: scale(0.96);
-    border-color: rgba(232, 72, 40, 0.35);
-    box-shadow: var(--shadow-md);
-  }
-  .tool-icon {
-    width: 36px;
-    height: 36px;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    margin-bottom: 0;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  }
-  .tool-icon :global(svg) {
-    display: block;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
-  }
-  .hue-c .tool-icon { background: var(--cinabro-soft); color: var(--cinabro-bright); }
-  .hue-g .tool-icon { background: var(--gold-soft); color: var(--gold); }
-  .hue-j .tool-icon { background: var(--jade-soft); color: var(--jade-bright); }
-  .hue-b .tool-icon { background: rgba(79, 195, 199, 0.14); color: #4fc3c7; }
-  .hue-p .tool-icon { background: rgba(155, 111, 212, 0.14); color: #b48fe0; }
-  .hue-r .tool-icon { background: rgba(224, 82, 82, 0.14); color: #e87070; }
-  .tool-label {
+  .move-lbl {
+    font-family: var(--mono);
+    font-size: 8px;
     font-weight: 600;
-    font-size: 0.76rem;
-    color: var(--ink);
-    text-align: center;
-    letter-spacing: 0.01em;
-    line-height: 1.2;
-  }
-  .tool-desc {
-    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: var(--ink-faint);
-    line-height: 1.25;
-    text-align: center;
+  }
+  .move-route {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .move-meta {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+  }
+  .move-go {
+    flex: none;
+    color: var(--ink-faint);
+    font-size: 1.15rem;
+    line-height: 1;
   }
 
-  /* Staggered entrance */
-  .mast-panel { animation: rise 0.4s var(--ease) both; }
-  .progress-block { animation: rise 0.45s var(--ease) 0.04s both; }
-  .hero { animation: rise 0.5s var(--ease) 0.08s both; }
-  .block { animation: rise 0.5s var(--ease) both; }
-  .block:nth-child(4) { animation-delay: 0.1s; }
-  .block:nth-child(5) { animation-delay: 0.14s; }
-  .block:nth-child(6) { animation-delay: 0.18s; }
-  .block:nth-child(7) { animation-delay: 0.22s; }
-  .tools-block { animation-delay: 0.26s; }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: none; }
+  /* Strumenti */
+  .tools-h {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
   }
+  .tools .shortcut-grid { margin-top: 8px; }
 </style>

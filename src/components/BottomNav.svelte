@@ -2,6 +2,11 @@
   import { nav, go, isTab, type Tab } from '../lib/router.svelte';
   import { haptic } from '../lib/haptic';
 
+  interface Props {
+    compact?: boolean;
+  }
+  let { compact = false }: Props = $props();
+
   const items: { route: Tab; label: string }[] = [
     { route: 'oggi', label: 'Oggi' },
     { route: 'citta', label: 'Città' },
@@ -33,7 +38,7 @@
   };
 </script>
 
-<nav class="bottom-nav" aria-label="Navigazione principale">
+<nav class="bottom-nav" class:compact aria-label="Navigazione principale">
   <div class="nav-inner">
     {#each items as item (item.route)}
       <button
@@ -86,6 +91,13 @@
       0 -8px 32px color-mix(in srgb, var(--city-accent, var(--cinabro)) 10%, transparent);
     overflow-x: auto;
     scrollbar-width: none;
+    transition:
+      min-height var(--duration-slow, 0.42s) var(--ease),
+      border-radius var(--duration-slow, 0.42s) var(--ease);
+  }
+  .bottom-nav.compact .nav-inner {
+    min-height: calc(58px + var(--safe-bottom));
+    border-radius: 18px 18px 0 0;
   }
   .nav-inner::-webkit-scrollbar { display: none; }
   .item {
@@ -100,7 +112,13 @@
     gap: 4px;
     padding: 10px 4px 8px;
     color: var(--ink-faint);
-    transition: color 0.2s var(--ease);
+    transition:
+      color 0.2s var(--ease),
+      height var(--duration-slow, 0.42s) var(--ease);
+  }
+  .bottom-nav.compact .item {
+    height: 58px;
+    padding-top: 8px;
   }
   .item.active { color: var(--city-accent, var(--cinabro-bright)); }
   .ic {

@@ -6,6 +6,8 @@
   import type { CityId } from './data/types';
   import BottomNav from './components/BottomNav.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
+  import ThemeToggle from './components/ThemeToggle.svelte';
+  import ToastStack from './components/ToastStack.svelte';
   import Oggi from './routes/Oggi.svelte';
   import Citta from './routes/Citta.svelte';
   import CittaDetail from './routes/CittaDetail.svelte';
@@ -54,6 +56,13 @@
   const routeMotionClass = $derived(
     navMotion.dir === 1 ? 'slide-forward' : navMotion.dir === -1 ? 'slide-back' : '',
   );
+
+  let navCompact = $state(false);
+
+  function onScreenScroll(e: Event) {
+    const el = e.currentTarget as HTMLElement;
+    navCompact = el.scrollTop > 48;
+  }
 </script>
 
 <div class="app-shell" style="--city-accent: {cityAccent}">
@@ -63,12 +72,16 @@
     aria-hidden="true"
   ></div>
 
+  <ThemeToggle class="shell-theme" />
+
   <main
     class="screen"
     class:screen-tight={route.key === 'oggi'}
     class:screen-map={route.key === 'mappa'}
+    onscroll={onScreenScroll}
   >
     <OfflineBanner />
+    <ToastStack />
     {#key route.key}
       <div class="route-view {routeMotionClass}">
         <Comp />
@@ -76,5 +89,19 @@
     {/key}
   </main>
 
-  <BottomNav />
+  <BottomNav compact={navCompact} />
 </div>
+
+<style>
+  :global(.shell-theme) {
+    position: fixed;
+    bottom: calc(var(--nav-total-h) + 10px);
+    left: max(14px, calc(50% - 240px + 14px));
+    z-index: 55;
+  }
+  @media (max-width: 480px) {
+    :global(.shell-theme) {
+      left: 14px;
+    }
+  }
+</style>

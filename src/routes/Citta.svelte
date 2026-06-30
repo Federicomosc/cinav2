@@ -46,21 +46,24 @@
         <img class="cover" src={cityCoverSrc(c.id)} alt="" loading="lazy" decoding="async" />
         <div class="cover-scrim"></div>
         <div class="cover-accent-line"></div>
+        <span class="cover-wm">{c.nameLocal}</span>
         <span class="step-stamp">{String(i + 1).padStart(2, '0')}</span>
-        <span class="cover-icon">{theme.icon}</span>
         <div class="cover-titles">
           <h2 class="name">{c.name}</h2>
-          <span class="cn">{c.nameLocal}</span>
+          <span class="cn cn-cover">{c.nameLocal}</span>
         </div>
       </div>
 
       <div class="card-body">
+        <span class="card-wm" aria-hidden="true">{c.nameLocal}</span>
         <div class="meta-row">
           <span class="meta-tag">Tappa {i + 1}</span>
           {#if leg}
             <span class="meta-date">{shortDate(leg.from)} – {shortDate(leg.to)}</span>
           {/if}
         </div>
+
+        <span class="cn cn-body">{c.nameLocal}</span>
 
         <p class="intro prose-lead">{c.intro}</p>
 
@@ -143,21 +146,27 @@
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-lg);
-    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line-strong));
-    background: var(--surface);
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line-strong));
+    background: linear-gradient(
+      168deg,
+      color-mix(in srgb, var(--accent) 6%, var(--surface-hi)) 0%,
+      var(--surface) 38%,
+      var(--surface) 100%
+    );
     box-shadow:
       var(--shadow-md),
-      0 0 0 1px color-mix(in srgb, var(--accent) 6%, transparent),
-      0 20px 40px color-mix(in srgb, var(--accent) 10%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent),
+      0 20px 44px color-mix(in srgb, var(--accent) 14%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--accent) 10%, transparent);
     transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s;
   }
   .city-card:active {
     transform: scale(0.985);
-    border-color: color-mix(in srgb, var(--accent) 42%, var(--line-strong));
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong));
     box-shadow:
       var(--shadow-lg),
-      0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
-      0 24px 48px color-mix(in srgb, var(--accent) 18%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+      0 28px 52px color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
   .cover-zone {
@@ -181,8 +190,8 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(125deg, color-mix(in srgb, #000 55%, transparent) 0%, transparent 48%),
-      linear-gradient(180deg, transparent 0%, transparent 35%, color-mix(in srgb, #000 72%, transparent) 100%);
+      linear-gradient(125deg, color-mix(in srgb, var(--accent) 18%, #000) 0%, transparent 42%),
+      linear-gradient(180deg, transparent 0%, transparent 32%, color-mix(in srgb, #000 70%, transparent) 100%);
     pointer-events: none;
   }
   .cover-accent-line {
@@ -191,8 +200,24 @@
     right: 0;
     bottom: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent) 75%, transparent);
-    box-shadow: 0 -6px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--cinabro)) 50%, transparent);
+    box-shadow: 0 -8px 28px color-mix(in srgb, var(--accent) 50%, transparent);
+    z-index: 3;
+  }
+  .cover-wm {
+    position: absolute;
+    right: 6px;
+    top: 2px;
+    font-family: var(--hanzi);
+    font-size: 5rem;
+    font-weight: 600;
+    line-height: 1;
+    color: color-mix(in srgb, #fff 10%, var(--accent));
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+    text-shadow: 0 0 40px color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .step-stamp {
     position: absolute;
@@ -210,13 +235,6 @@
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  }
-  .cover-icon {
-    position: absolute;
-    right: 14px;
-    top: 12px;
-    font-size: 1.5rem;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
   }
   .cover-titles {
     position: absolute;
@@ -238,26 +256,73 @@
   .cn {
     display: block;
     font-family: var(--hanzi);
-    font-size: 1.15rem;
     font-weight: 500;
-    color: color-mix(in srgb, #fff 88%, var(--accent));
-    margin-top: 2px;
-    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+    line-height: 1.15;
+  }
+  .cn-cover {
+    font-size: 1.2rem;
+    color: color-mix(in srgb, #fff 82%, var(--accent));
+    margin-top: 3px;
+    text-shadow:
+      0 2px 14px rgba(0, 0, 0, 0.5),
+      0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .cn-body {
+    position: relative;
+    z-index: 2;
+    font-size: 1.35rem;
+    color: var(--accent);
+    margin: 0 0 8px;
+    text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 28%, transparent);
   }
 
   .card-body {
-    padding: 16px 18px 18px;
+    padding: 14px 18px 16px;
     position: relative;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 5%, var(--surface)) 0%,
+      var(--surface) 100%
+    );
+  }
+  .card-wm {
+    position: absolute;
+    right: 8px;
+    top: -6px;
+    font-family: var(--hanzi);
+    font-size: 3.4rem;
+    font-weight: 600;
+    line-height: 1;
+    color: color-mix(in srgb, var(--accent) 16%, transparent);
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
   }
   .card-body::before {
     content: '';
     position: absolute;
-    right: 6px;
-    top: -12px;
-    width: 72px;
-    height: 72px;
+    right: -8px;
+    top: -20px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .card-body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--accent) 35%, transparent) 50%,
+      transparent
+    );
     pointer-events: none;
   }
 
@@ -266,7 +331,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 2;
   }
   .meta-tag {
     font-family: var(--mono);
@@ -289,23 +356,27 @@
   }
 
   .intro {
-    margin: 0 0 14px;
+    margin: 0 0 12px;
     padding-left: 12px;
-    border-left: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-size: 0.95rem;
-    line-height: 1.62;
+    font-size: 0.92rem;
+    line-height: 1.58;
+    position: relative;
+    z-index: 2;
   }
 
   .highlights {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
   }
   .hl-chip {
     font-family: var(--mono);
@@ -316,8 +387,8 @@
     color: var(--ink-body);
     padding: 5px 9px;
     border-radius: var(--radius-pill);
-    background: var(--paper-2);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--accent) 6%, var(--paper-2));
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
   }
 
   .card-foot {
@@ -325,8 +396,10 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
+    padding-top: 10px;
+    border-top: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
+    position: relative;
+    z-index: 2;
   }
   .poi-count {
     font-family: var(--mono);

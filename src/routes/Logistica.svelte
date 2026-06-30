@@ -12,6 +12,8 @@
   import { cubicOut } from 'svelte/easing';
   import { daySwipe } from '../lib/day-swipe';
   import { haptic } from '../lib/haptic';
+  import ScreenHeader from '../components/ScreenHeader.svelte';
+  import { showToast } from '../lib/toast.svelte';
 
   const SCHEDULE_SLOTS: { key: keyof GiornoSchedule; label: string }[] = [
     { key: 'mattino', label: 'Mattino' },
@@ -85,7 +87,11 @@
   async function toggleAct(dayN: number, label: string) {
     const id = actId(dayN, label);
     if (checkedActs.has(id)) await db.actChecks.delete(id);
-    else await db.actChecks.put({ id, checkedAt: now() });
+    else {
+      await db.actChecks.put({ id, checkedAt: now() });
+      haptic(10);
+      showToast('Attività completata');
+    }
   }
 
   const day = $derived(giorni.find((g) => g.n === focus)!);
@@ -151,16 +157,12 @@
 </script>
 
 <div class="agenda" style="--day-accent: {meta.accent}">
-  <header class="top">
-    <div class="top-deco" aria-hidden="true">
-      <span class="top-line"></span>
-      <span class="top-seal">程</span>
-      <span class="top-line"></span>
-    </div>
-    <p class="eyebrow">Agenda · 20 giorni</p>
-    <h1>Il viaggio</h1>
-    <p class="hint prose-lead">Scorri la scheda o i chip per navigare giorno per giorno.</p>
-  </header>
+  <ScreenHeader
+    seal="程"
+    eyebrow="Agenda · 20 giorni"
+    title="Il viaggio"
+    sub="Scorri la scheda o i chip per navigare giorno per giorno."
+  />
 
   <!-- Avanzamento viaggio -->
   <div class="trip-meter" aria-label="Giorno {focus} di 20, {tripPct}% del viaggio">
@@ -408,61 +410,6 @@
 
 <style>
   .agenda { padding-bottom: 24px; }
-
-  .top { margin-bottom: 16px; }
-  .top-deco {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .top-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      var(--line-strong) 20%,
-      color-mix(in srgb, var(--city-accent, var(--cinabro)) 35%, transparent) 50%,
-      var(--line-strong) 80%,
-      transparent
-    );
-  }
-  .top-seal {
-    flex: none;
-    width: 30px;
-    height: 30px;
-    display: grid;
-    place-items: center;
-    font-family: var(--hanzi);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--city-accent, var(--cinabro-bright));
-    background: color-mix(in srgb, var(--city-accent, var(--cinabro)) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--city-accent, var(--cinabro)) 30%, var(--line));
-    border-radius: 8px;
-    box-shadow: 0 0 18px color-mix(in srgb, var(--city-accent, var(--cinabro)) 22%, transparent);
-  }
-  h1 {
-    font-size: 2.4rem;
-    margin: 4px 0 8px;
-    font-family: var(--serif);
-    letter-spacing: -0.025em;
-    background: linear-gradient(
-      135deg,
-      var(--ink) 0%,
-      color-mix(in srgb, var(--ink-soft) 85%, var(--city-accent, var(--cinabro))) 100%
-    );
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .hint {
-    max-width: 38ch;
-    font-size: 0.94rem;
-    padding-left: 14px;
-    border-left: 2px solid color-mix(in srgb, var(--city-accent, var(--cinabro)) 45%, transparent);
-  }
 
   /* Trip meter */
   .trip-meter {

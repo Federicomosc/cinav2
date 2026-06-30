@@ -6,6 +6,7 @@
   import { itinerario } from '../lib/content';
   import { netBalances, settle } from '../lib/spese';
   import { cny, shortDate, toIsoDay } from '../lib/format';
+  import { showToast } from '../lib/toast.svelte';
 
   const members = itinerario.trip.members;
   const rate = itinerario.trip.cnyPerEur;
@@ -62,6 +63,7 @@
     };
     if (editingId) await db.expenses.update(editingId, payload);
     else await db.expenses.add({ id: uid(), ...payload });
+    showToast(editingId ? 'Spesa aggiornata' : 'Spesa salvata');
     resetForm();
   }
 

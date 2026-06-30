@@ -115,12 +115,11 @@
       <div class="hero-scrim" aria-hidden="true"></div>
       <div class="hero-accent-bar" aria-hidden="true"></div>
       <span class="hero-wm" aria-hidden="true">{city.nameLocal}</span>
-      {#if theme}<span class="hero-icon" aria-hidden="true">{theme.icon}</span>{/if}
 
       <div class="hero-overlay">
         <div class="hero-meta">
           {#if theme}
-            <span class="hero-badge">{theme.icon} Tappa {tappaN}</span>
+            <span class="hero-badge">Tappa {tappaN}</span>
           {/if}
           {#if leg}
             <span class="hero-when">{shortDate(leg.from)} – {shortDate(leg.to)}</span>
@@ -339,14 +338,6 @@
     pointer-events: none;
     user-select: none;
     z-index: 1;
-  }
-  .hero-icon {
-    position: absolute;
-    right: 16px;
-    top: 16px;
-    font-size: 1.75rem;
-    z-index: 4;
-    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5));
   }
   .hero-overlay {
     position: absolute;
