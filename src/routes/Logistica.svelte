@@ -8,12 +8,42 @@
   import { liveQuery } from 'dexie';
   import type { Giorno, GiornoSchedule } from '../data/types';
   import { cityThemeByItalianName, cityCoverSrc } from '../lib/city-theme';
-  import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { daySwipe } from '../lib/day-swipe';
   import { haptic } from '../lib/haptic';
   import ScreenHeader from '../components/ScreenHeader.svelte';
   import { showToast } from '../lib/toast.svelte';
+
+  // Transizione carte-giorno (solo transform/opacity → fluida e composita).
+  // Avanti: la nuova carta emerge "da dietro" (scala su + dissolvenza) mentre la
+  // vecchia scorre via in avanti. Indietro: il mirror (la precedente rientra da
+  // davanti, l'attuale arretra dietro).
+  function cardIn(_n: Element, { dir }: { dir: number }) {
+    return {
+      duration: 500,
+      easing: cubicOut,
+      css: (t: number) => {
+        const u = 1 - t;
+        const base = 'will-change: transform, opacity;';
+        return dir >= 0
+          ? `${base} transform: translateY(${u * 12}px) scale(${1 - u * 0.1}); opacity: ${t}; z-index: 1;`
+          : `${base} transform: translateX(${-u * 24}%) scale(${1 + u * 0.04}); opacity: ${t}; z-index: 2;`;
+      },
+    };
+  }
+  function cardOut(_n: Element, { dir }: { dir: number }) {
+    return {
+      duration: 440,
+      easing: cubicOut,
+      css: (t: number) => {
+        const u = 1 - t;
+        const base = 'will-change: transform, opacity;';
+        return dir >= 0
+          ? `${base} transform: translateX(${-u * 24}%) scale(${1 + u * 0.04}); opacity: ${t}; z-index: 2;`
+          : `${base} transform: translateY(${u * 12}px) scale(${1 - u * 0.1}); opacity: ${t}; z-index: 1;`;
+      },
+    };
+  }
 
   const SCHEDULE_SLOTS: { key: keyof GiornoSchedule; label: string }[] = [
     { key: 'mattino', label: 'Mattino' },
@@ -241,12 +271,13 @@
       <span class="swipe-arrow" class:off={focus >= 20}>›</span>
     </div>
 
+    <div class="day-cards">
     {#key focus}
       <article
         class="day-sheet"
         style="--c:{meta.accent}"
-        in:fly={{ x: slideDir * 88, duration: 420, opacity: 0.96, easing: cubicOut }}
-        out:fly={{ x: slideDir * -88, duration: 300, opacity: 0.92, easing: cubicOut }}
+        in:cardIn={{ dir: slideDir }}
+        out:cardOut={{ dir: slideDir }}
       >
       <div class="sheet-accent" aria-hidden="true"></div>
 
@@ -376,6 +407,7 @@
       </footer>
     </article>
     {/key}
+    </div>
   </div>
 
   <!-- Panoramica rapida (tutti i giorni, compatto) -->
@@ -513,6 +545,29 @@
   }
   .day-stage.swiping {
     transition: none;
+  }
+  /* Le carte (uscente + entrante) occupano la STESSA cella: si sovrappongono
+     durante la transizione invece di impilarsi in verticale (niente salto di
+     altezza → cambio fluido). */
+  .day-cards {
+    display: grid;
+  }
+  .day-cards > .day-sheet {
+    grid-area: 1 / 1;
+    align-self: start;
+  }
+  /* La card si anima con transform: i backdrop-filter INTERNI verrebbero
+     ri-rasterizzati a ogni frame → scatti. Disattivati (sopra la card sono
+     ininfluenti); il badge sul-foto compensa con sfondo più opaco. */
+  .day-sheet .sheet-day-stamp,
+  .day-sheet .travel-banner,
+  .day-sheet .schedule,
+  .day-sheet .hotel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .day-sheet .sheet-day-stamp {
+    background: color-mix(in srgb, #000 64%, transparent);
   }
   .swipe-hint {
     display: flex;
