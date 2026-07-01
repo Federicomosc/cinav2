@@ -17,6 +17,7 @@
     "phrases:audio": "node scripts/generate-phrases-audio.mjs",
     "metro:fetch": "node scripts/fetch-metro-data.mjs",
     "places:images": "node scripts/download-poi-images.mjs",
+    "places:images:new": "node scripts/fetch-new-poi-images.mjs",
     "offline:verify": "node scripts/verify-offline-assets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

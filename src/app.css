@@ -23,8 +23,12 @@
   --jade-bright: #5cc99a;
   --jade-soft: rgba(63, 168, 122, 0.14);
 
-  --gold: #e4b04a;
-  --gold-soft: rgba(228, 176, 74, 0.16);
+  --gold: #d8a24a;
+  --gold-bright: #e7c079;
+  --gold-deep: #9c6a1e;
+  --gold-soft: rgba(216, 162, 74, 0.15);
+  /* Oro metallico "ottone antico": accento raro, in dialogo col vermiglio */
+  --gold-metallic: linear-gradient(140deg, #eed6a0 0%, #d8ad5c 42%, #b6862c 70%, #855c1c 100%);
 
   --radius-xs: 8px;
   --radius-sm: 12px;
@@ -32,14 +36,24 @@
   --radius-lg: 24px;
   --radius-pill: 999px;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  /* Ombre calde e stratificate (tinta bruno-lacca invece del nero puro) +
+     filo di luce interno: danno profondità "oggetto reale" premium. */
+  --shadow-sm:
+    0 1px 2px rgba(8, 4, 2, 0.5),
+    0 2px 8px -1px rgba(8, 4, 2, 0.32);
   --shadow-md:
-    0 2px 8px rgba(0, 0, 0, 0.35),
-    0 12px 32px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 1px 2px rgba(8, 4, 2, 0.5),
+    0 6px 16px -4px rgba(8, 4, 2, 0.42),
+    0 20px 42px -14px rgba(24, 10, 4, 0.55),
+    inset 0 1px 0 rgba(255, 240, 220, 0.05);
   --shadow-lg:
-    0 4px 16px rgba(0, 0, 0, 0.4),
-    0 24px 56px rgba(0, 0, 0, 0.35);
+    0 2px 6px rgba(8, 4, 2, 0.5),
+    0 14px 30px -8px rgba(8, 4, 2, 0.5),
+    0 44px 84px -28px rgba(24, 10, 4, 0.7),
+    inset 0 1px 0 rgba(255, 240, 220, 0.06);
+  --hairline: linear-gradient(90deg, transparent, rgba(255, 238, 214, 0.14) 22%, rgba(255, 238, 214, 0.16) 50%, rgba(255, 238, 214, 0.14) 78%, transparent);
+  --glow-cinabro: 0 0 34px -6px var(--cinabro-glow);
+  --glow-gold: 0 0 30px -6px rgba(228, 176, 74, 0.42);
 
   --serif: 'Cormorant Garamond', Georgia, serif;
   --sans: 'Figtree', system-ui, sans-serif;
@@ -134,16 +148,26 @@ html[data-theme="day"] {
   --jade-soft: rgba(45, 138, 94, 0.1);
 
   --gold: #b8862e;
+  --gold-bright: #d9a942;
+  --gold-deep: #8a6220;
   --gold-soft: rgba(184, 134, 46, 0.12);
+  --gold-metallic: linear-gradient(140deg, #d8b258 0%, #c2933a 42%, #9a6f24 100%);
 
-  --shadow-sm: 0 1px 3px rgba(26, 20, 16, 0.07);
+  --shadow-sm:
+    0 1px 2px rgba(60, 44, 28, 0.08),
+    0 2px 8px -1px rgba(60, 44, 28, 0.07);
   --shadow-md:
-    0 2px 8px rgba(26, 20, 16, 0.08),
-    0 12px 32px rgba(26, 20, 16, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    0 1px 2px rgba(60, 44, 28, 0.08),
+    0 6px 16px -4px rgba(60, 44, 28, 0.1),
+    0 20px 42px -14px rgba(60, 44, 28, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --shadow-lg:
-    0 4px 16px rgba(26, 20, 16, 0.1),
-    0 24px 56px rgba(26, 20, 16, 0.08);
+    0 2px 6px rgba(60, 44, 28, 0.08),
+    0 14px 30px -8px rgba(60, 44, 28, 0.12),
+    0 44px 84px -28px rgba(60, 44, 28, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --hairline: linear-gradient(90deg, transparent, rgba(120, 90, 40, 0.16) 22%, rgba(120, 90, 40, 0.2) 50%, rgba(120, 90, 40, 0.16) 78%, transparent);
+  --glow-gold: 0 0 24px -8px rgba(184, 134, 46, 0.3);
 
   --nav-shell-fade: rgba(245, 240, 232, 0.92);
   --nav-shell-bar: rgba(255, 252, 247, 0.94);
@@ -179,6 +203,8 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
   overscroll-behavior: none;
   height: 100%;
   overflow: hidden;
@@ -215,6 +241,16 @@ body {
     radial-gradient(ellipse 50% 35% at 0% 70%, rgba(228, 176, 74, 0.06) 0%, transparent 45%),
     var(--paper);
   transition: background 0.6s var(--ease);
+}
+/* Notte: atmosfera imperiale più intensa — alone vermiglio in alto e bagliore
+   dorato in basso, come lacca sotto una lanterna. */
+html:not([data-theme="day"]) .app-ambient {
+  background:
+    radial-gradient(ellipse 94% 60% at 50% -12%, color-mix(in srgb, var(--city-accent) 38%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 122% 52% at 50% -4%, rgba(232, 72, 40, 0.17) 0%, transparent 54%),
+    radial-gradient(ellipse 66% 44% at 90% 22%, rgba(63, 168, 122, 0.09) 0%, transparent 50%),
+    radial-gradient(ellipse 92% 54% at 50% 114%, rgba(228, 176, 74, 0.11) 0%, transparent 56%),
+    var(--paper);
 }
 .app-ambient::before {
   content: '';
@@ -321,9 +357,13 @@ html.map-fs-active .shell-theme {
 h1, h2, h3, h4 {
   font-family: var(--serif);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.015em;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'dlig' 1;
 }
+h1 { letter-spacing: -0.028em; }
 
 .eyebrow {
   font-family: var(--mono);
@@ -468,21 +508,33 @@ h1, h2, h3, h4 {
 /* ── Card & superfici ─────────────────────────────────────────────────── */
 .card {
   position: relative;
-  background: linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 50%, color-mix(in srgb, var(--surface) 90%, var(--paper)) 100%);
-  border: 1px solid var(--line-strong);
+  background:
+    radial-gradient(135% 95% at 50% -25%, color-mix(in srgb, var(--surface-hi) 74%, var(--cinabro) 11%) 0%, transparent 58%),
+    linear-gradient(168deg, var(--surface-hi) 0%, var(--surface) 46%, color-mix(in srgb, var(--surface) 74%, var(--paper)) 100%);
+  border: 1px solid color-mix(in srgb, var(--cinabro) 12%, var(--line-strong));
   border-radius: var(--radius-md);
   padding: 18px 20px;
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
+/* Firma comune a TUTTE le card: filo vermiglio acceso in cima (bordo di lacca).
+   È il segno che unifica l'app, sul colore del brand — l'oro resta riservato. */
 .card::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 12%;
-  right: 12%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cinabro-bright) 72%, transparent) 18%,
+    var(--cinabro-bright) 50%,
+    color-mix(in srgb, var(--cinabro-bright) 72%, transparent) 82%,
+    transparent
+  );
+  box-shadow: 0 1px 16px -1px color-mix(in srgb, var(--cinabro) 60%, transparent);
   pointer-events: none;
 }
 
@@ -534,28 +586,41 @@ button,
 .btn-primary {
   display: block;
   width: 100%;
-  background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, var(--jade-bright) 0%, var(--jade) 46%, #2a7d59 100%);
   color: #fff;
+  border: 1px solid color-mix(in srgb, var(--jade) 55%, transparent);
   border-radius: var(--radius-sm);
   padding: 14px 18px;
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 16px rgba(63, 168, 122, 0.25);
-  transition: transform 0.15s var(--ease), box-shadow 0.15s;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 6px 18px -4px rgba(63, 168, 122, 0.42),
+    0 2px 6px rgba(8, 4, 2, 0.32);
+  transition: transform 0.15s var(--ease), box-shadow 0.15s, filter 0.15s;
 }
-.btn-primary:active { transform: scale(0.98); }
+.btn-primary:active {
+  transform: scale(0.98);
+  filter: brightness(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 8px -2px rgba(63, 168, 122, 0.4);
+}
 
 .btn-ghost {
   display: block;
   width: 100%;
-  background: var(--surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-hi) 92%, transparent), var(--surface));
   color: var(--ink-soft);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   padding: 13px 18px;
   font-weight: 500;
-  transition: border-color 0.15s, color 0.15s;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 240, 220, 0.04);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .btn-ghost:active { border-color: var(--cinabro); color: var(--ink); }
 
@@ -603,8 +668,8 @@ button,
   width: 4px;
   height: 1.1em;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--cinabro-bright) 0%, var(--gold) 100%);
-  box-shadow: 0 0 10px var(--cinabro-glow);
+  background: linear-gradient(180deg, var(--cinabro-bright) 0%, var(--gold-bright) 52%, var(--gold-deep) 100%);
+  box-shadow: 0 0 10px var(--cinabro-glow), 0 0 16px -4px rgba(228, 176, 74, 0.45);
   flex: none;
 }
 
@@ -631,8 +696,8 @@ button,
   width: 3px;
   height: 0.95em;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--cinabro-bright), var(--gold));
-  box-shadow: 0 0 8px var(--cinabro-glow);
+  background: linear-gradient(180deg, var(--cinabro-bright), var(--gold-bright) 55%, var(--gold-deep));
+  box-shadow: 0 0 8px var(--cinabro-glow), 0 0 14px -4px rgba(228, 176, 74, 0.45);
   flex: none;
 }
 .block-sub {
@@ -788,16 +853,29 @@ input::placeholder { color: var(--ink-faint); }
 .list-stack { display: flex; flex-direction: column; gap: 10px; }
 
 .row-item {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
   background: linear-gradient(155deg, var(--surface-hi) 0%, var(--surface) 100%);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  padding: 14px 16px;
+  padding: 14px 16px 14px 18px;
   box-shadow: var(--shadow-sm);
   text-align: left;
   transition: border-color 0.15s, transform 0.15s var(--ease);
+}
+/* Linguetta di lacca vermiglia a sinistra: firma coerente sulle liste */
+.row-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--cinabro-bright), color-mix(in srgb, var(--cinabro) 45%, transparent));
+  box-shadow: 0 0 12px -2px var(--cinabro-glow);
 }
 .row-item:active { transform: scale(0.99); border-color: rgba(224, 74, 40, 0.3); }
 

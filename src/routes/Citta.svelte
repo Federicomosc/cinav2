@@ -168,6 +168,17 @@
       0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
       0 28px 52px color-mix(in srgb, var(--accent) 22%, transparent);
   }
+  /* Cornice dorata: il layer imperiale comune a tutte le card-città */
+  .city-card::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border-radius: calc(var(--radius-lg) - 6px);
+    border: 1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--gold) 5%, transparent);
+    pointer-events: none;
+    z-index: 4;
+  }
 
   .cover-zone {
     position: relative;
@@ -227,14 +238,15 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #fff;
-    padding: 6px 10px;
+    color: var(--gold-bright);
+    padding: 6px 11px;
     border-radius: var(--radius-pill);
-    background: color-mix(in srgb, #000 48%, transparent);
+    background: color-mix(in srgb, #000 52%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    border: 1px solid color-mix(in srgb, var(--gold) 48%, transparent);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 16px -4px rgba(228, 176, 74, 0.55);
+    z-index: 5;
   }
   .cover-titles {
     position: absolute;

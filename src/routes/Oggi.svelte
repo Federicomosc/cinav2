@@ -81,7 +81,6 @@
     { route: 'spese' as const, label: 'Valuta', hue: 'g' },
     { route: 'emergenze' as const, label: 'Salute', hue: 'j' },
     { route: 'mappa' as const, label: 'Mappa', hue: 'b' },
-    { route: 'documenti' as const, label: 'Cassaforte', hue: 'p' },
   ];
 </script>
 
@@ -92,7 +91,8 @@
   </div>
 
   <!-- Numero gigante: countdown (2a) o giorno di viaggio (2b) -->
-  <div class="hero">
+  <div class="hero framed">
+    <span class="hero-frame" aria-hidden="true"></span>
     <span class="hero-wm" aria-hidden="true">
       {info.phase === 'during' && city ? city.nameLocal : '行'}
     </span>
@@ -100,14 +100,17 @@
       {#if info.phase === 'before'}
         <span class="hero-kicker">Mancano</span>
         <span class="hero-num">{info.daysToStart}</span>
+        <span class="hero-rule" aria-hidden="true"></span>
         <span class="hero-sub">Giorni al volo</span>
       {:else if info.phase === 'after'}
         <span class="hero-kicker">Durata</span>
         <span class="hero-num">{tripTotalDays}</span>
+        <span class="hero-rule" aria-hidden="true"></span>
         <span class="hero-sub">Giorni in Cina</span>
       {:else}
         <span class="hero-kicker">Giorno</span>
         <span class="hero-num">{tripDay}</span>
+        <span class="hero-rule" aria-hidden="true"></span>
         <span class="hero-sub">di {tripTotalDays}{city ? ` · ${city.name}` : ''}</span>
       {/if}
     </div>
@@ -280,11 +283,54 @@
   }
   @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-  /* ── Numero gigante ── */
+  /* ── Numero gigante — folio imperiale incorniciato ── */
   .hero {
     position: relative;
     text-align: center;
-    margin: 46px 0 16px;
+    margin: 26px 0 18px;
+    padding: 34px 22px 26px;
+  }
+  .hero.framed {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background:
+      radial-gradient(120% 92% at 50% 4%, color-mix(in srgb, var(--accent, var(--cinabro)) 15%, transparent) 0%, transparent 60%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface) 62%, transparent) 0%, color-mix(in srgb, var(--paper) 50%, transparent) 100%);
+    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.7);
+  }
+  /* Doppio filo dorato + angoli: cornice da folio imperiale */
+  .hero-frame {
+    position: absolute;
+    inset: 9px;
+    border-radius: 17px;
+    border: 1px solid color-mix(in srgb, var(--gold) 36%, transparent);
+    box-shadow:
+      inset 0 0 0 5px color-mix(in srgb, var(--gold) 7%, transparent),
+      0 0 48px -20px rgba(228, 176, 74, 0.55);
+    pointer-events: none;
+  }
+  .hero-frame::before,
+  .hero-frame::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--gold-bright);
+    filter: drop-shadow(0 0 6px rgba(228, 176, 74, 0.55));
+  }
+  .hero-frame::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 7px 0 0 0;
+  }
+  .hero-frame::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+    border-radius: 0 0 7px 0;
   }
   .hero-wm {
     position: absolute;
@@ -293,9 +339,9 @@
     transform: translate(-50%, -50%);
     font-family: var(--hanzi);
     font-weight: 600;
-    font-size: 9.5rem;
+    font-size: 7.2rem;
     line-height: 1;
-    color: color-mix(in srgb, var(--accent, var(--cinabro)) 4.5%, transparent);
+    color: color-mix(in srgb, var(--gold) 7%, transparent);
     pointer-events: none;
     user-select: none;
     white-space: nowrap;
@@ -303,13 +349,42 @@
   }
   .hero-inner { position: relative; z-index: 1; }
   .hero-kicker {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     font-family: var(--mono);
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.26em;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
-    color: var(--ink-faint);
+    color: var(--gold);
+  }
+  .hero-kicker::before,
+  .hero-kicker::after {
+    content: '';
+    width: 18px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+  .hero-kicker::after { transform: scaleX(-1); }
+  /* Divisore a diamante dorato tra numero e sottotitolo */
+  .hero-rule {
+    position: relative;
+    display: block;
+    width: 66px;
+    height: 1px;
+    margin: 12px auto 12px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-bright) 80%, transparent), transparent);
+  }
+  .hero-rule::before {
+    content: '◆';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 7px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 8px rgba(228, 176, 74, 0.7);
   }
   .hero-num {
     display: block;
@@ -319,11 +394,13 @@
     line-height: 1;
     padding-top: 0.08em;
     letter-spacing: -0.04em;
-    background: linear-gradient(160deg, var(--cinabro-bright), var(--cinabro) 50%, var(--gold));
+    background: linear-gradient(155deg, #ffdca6 0%, var(--cinabro-bright) 32%, var(--cinabro) 62%, var(--gold-bright) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 8px 30px color-mix(in srgb, var(--cinabro) 30%, transparent));
+    filter:
+      drop-shadow(0 6px 26px color-mix(in srgb, var(--cinabro) 45%, transparent))
+      drop-shadow(0 2px 12px rgba(228, 176, 74, 0.32));
   }
   .hero-sub {
     display: block;
@@ -642,7 +719,7 @@
   }
   .tools-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
   .tool {

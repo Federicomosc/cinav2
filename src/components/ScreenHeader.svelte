@@ -52,10 +52,30 @@
 
 <style>
   .sh {
+    position: relative;
     margin-bottom: var(--space-5, 20px);
+    padding-bottom: 15px;
   }
   .sh.compact {
     margin-bottom: var(--space-3, 12px);
+    padding-bottom: 12px;
+  }
+  /* Linea di base "folio": chiude l'intestazione e dà struttura su ogni pagina */
+  .sh::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--city-accent, var(--cinabro)) 32%, transparent) 16%,
+      var(--line-strong) 50%,
+      color-mix(in srgb, var(--city-accent, var(--cinabro)) 32%, transparent) 84%,
+      transparent
+    );
   }
   .sh-back {
     display: inline-flex;
@@ -136,10 +156,10 @@
     gap: var(--space-2, 8px);
   }
   h1 {
-    font-size: var(--text-hero, 2.4rem);
+    font-size: clamp(2.35rem, 8.5vw, 2.75rem);
     margin: 4px 0 6px;
-    letter-spacing: -0.025em;
-    line-height: 1.02;
+    letter-spacing: -0.03em;
+    line-height: 1.0;
     background: linear-gradient(
       135deg,
       var(--ink) 0%,

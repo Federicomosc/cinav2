@@ -83,11 +83,12 @@
        contenuto che scorre e il blur la farebbe ri-rasterizzare a ogni frame. */
     background: color-mix(in srgb, var(--paper) 12%, var(--nav-shell-bar));
     border: 1px solid var(--line-strong);
+    border-top: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line-strong));
     border-bottom: none;
     border-radius: 22px 22px 0 0;
     box-shadow:
       var(--shadow-lg),
-      inset 0 1px 0 var(--nav-shell-inset),
+      inset 0 1px 0 color-mix(in srgb, var(--gold-bright) 22%, var(--nav-shell-inset)),
       0 -8px 32px color-mix(in srgb, var(--city-accent, var(--cinabro)) 10%, transparent);
     overflow-x: auto;
     scrollbar-width: none;
@@ -120,7 +121,7 @@
     height: 58px;
     padding-top: 8px;
   }
-  .item.active { color: var(--city-accent, var(--cinabro-bright)); }
+  .item.active { color: var(--gold-bright); }
   .ic {
     position: relative;
     display: grid;
@@ -139,8 +140,8 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--city-accent, var(--cinabro)) 14%, transparent);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--city-accent, var(--cinabro)) 35%, transparent);
+    background: color-mix(in srgb, var(--gold) 16%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--gold) 42%, transparent);
   }
   .item.active .ic :global(svg) {
     position: relative;
@@ -154,13 +155,15 @@
     text-transform: uppercase;
   }
   .item.active .lbl { font-weight: 600; }
+  /* Indicatore attivo: barra dorata in cima alla voce (invece del pallino) */
   .dot {
     position: absolute;
-    bottom: 6px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--city-accent, var(--cinabro));
-    box-shadow: 0 0 10px color-mix(in srgb, var(--city-accent, var(--cinabro)) 50%, transparent);
+    top: 0;
+    bottom: auto;
+    width: 24px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-bright) 50%, var(--gold));
+    box-shadow: 0 0 12px rgba(228, 176, 74, 0.7);
   }
 </style>

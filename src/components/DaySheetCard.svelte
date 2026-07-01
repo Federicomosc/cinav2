@@ -255,6 +255,17 @@
       0 0 0 1px color-mix(in srgb, var(--c) 8%, transparent),
       0 28px 56px color-mix(in srgb, var(--c) 14%, transparent);
   }
+  /* Cornice dorata: layer imperiale comune (come le card-città) */
+  .day-sheet::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border-radius: calc(var(--radius-lg) - 6px);
+    border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--gold) 4%, transparent);
+    pointer-events: none;
+    z-index: 5;
+  }
   .sheet-accent {
     height: 4px;
     background: linear-gradient(
@@ -333,11 +344,11 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #fff;
+    color: var(--gold-bright);
     padding: 6px 11px;
     border-radius: var(--radius-pill);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    border: 1px solid color-mix(in srgb, var(--gold) 48%, transparent);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 16px -4px rgba(228, 176, 74, 0.55);
   }
   .sheet-today {
     position: absolute;

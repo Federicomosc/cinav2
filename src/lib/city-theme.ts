@@ -10,11 +10,13 @@ export interface CityTheme {
 }
 
 export const CITY_THEME: Record<CityId, CityTheme> = {
-  chengdu: { id: 'chengdu', accent: '#52b788', icon: '🐼', hanzi: '成都', coverPoi: 'panda-base' },
-  chongqing: { id: 'chongqing', accent: '#e05252', icon: '🌶️', hanzi: '重庆', coverPoi: 'hongya' },
-  zhangjiajie: { id: 'zhangjiajie', accent: '#4fc3c7', icon: '⛰️', hanzi: '张家界', coverPoi: 'avatar-park' },
-  pechino: { id: 'pechino', accent: '#e0b552', icon: '🏯', hanzi: '北京', coverPoi: 'forbidden-city' },
-  shanghai: { id: 'shanghai', accent: '#9b6fd4', icon: '🌃', hanzi: '上海', coverPoi: 'bund' },
+  // Accenti "gioiello imperiale": tonalità profonde e sature, un'identità per
+  // città ma tutte in dialogo con la lacca vermiglia e l'oro dell'app.
+  chengdu: { id: 'chengdu', accent: '#2f9e6c', icon: '🐼', hanzi: '成都', coverPoi: 'panda-base' },
+  chongqing: { id: 'chongqing', accent: '#d23a24', icon: '🌶️', hanzi: '重庆', coverPoi: 'hongya' },
+  zhangjiajie: { id: 'zhangjiajie', accent: '#1f9aa0', icon: '⛰️', hanzi: '张家界', coverPoi: 'avatar-park' },
+  pechino: { id: 'pechino', accent: '#d6a43e', icon: '🏯', hanzi: '北京', coverPoi: 'forbidden-city' },
+  shanghai: { id: 'shanghai', accent: '#8a5bc9', icon: '🌃', hanzi: '上海', coverPoi: 'bund' },
 };
 
 export const CITY_BY_IT_NAME: Record<string, CityId> = {
