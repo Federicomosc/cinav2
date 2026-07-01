@@ -46,10 +46,13 @@
   --mono: 'IBM Plex Mono', monospace;
   --hanzi: 'Noto Serif SC', 'Cormorant Garamond', serif;
 
-  --nav-h: 72px;
-  --nav-total-h: calc(6px + var(--nav-h) + var(--safe-bottom));
+  --nav-h: 60px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Clearance sotto la nav: parte del safe-area (home indicator) ma ritagliata,
+     così le icone non restano lontane dal bordo inferiore. */
+  --nav-safe-b: max(4px, calc(var(--safe-bottom) - 16px));
+  --nav-total-h: calc(6px + var(--nav-h) + var(--nav-safe-b));
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --screen-content-h: calc(100dvh - var(--nav-total-h) - var(--safe-top));
 

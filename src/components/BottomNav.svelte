@@ -77,8 +77,8 @@
     align-items: flex-start;
     width: 100%;
     max-width: 456px;
-    min-height: calc(var(--nav-h) + var(--safe-bottom));
-    padding-bottom: var(--safe-bottom);
+    min-height: calc(var(--nav-h) + var(--nav-safe-b));
+    padding-bottom: var(--nav-safe-b);
     /* Sfondo più opaco invece di backdrop-filter: la nav è sempre sopra il
        contenuto che scorre e il blur la farebbe ri-rasterizzare a ogni frame. */
     background: color-mix(in srgb, var(--paper) 12%, var(--nav-shell-bar));
@@ -96,7 +96,7 @@
       border-radius var(--duration-slow, 0.42s) var(--ease);
   }
   .bottom-nav.compact .nav-inner {
-    min-height: calc(58px + var(--safe-bottom));
+    min-height: calc(54px + var(--nav-safe-b));
     border-radius: 18px 18px 0 0;
   }
   .nav-inner::-webkit-scrollbar { display: none; }
