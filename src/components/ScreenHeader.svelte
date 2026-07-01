@@ -9,6 +9,9 @@
     compact?: boolean;
     actions?: Snippet;
     class?: string;
+    /** Se impostato, mostra un pulsante "indietro" in alto. */
+    backLabel?: string;
+    onback?: () => void;
   }
   let {
     seal = '旅',
@@ -18,10 +21,18 @@
     compact = false,
     actions,
     class: className = '',
+    backLabel = 'Indietro',
+    onback,
   }: Props = $props();
 </script>
 
 <header class="sh {className}" class:compact>
+  {#if onback}
+    <button type="button" class="sh-back" onclick={onback}>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+      {backLabel}
+    </button>
+  {/if}
   <div class="deco" aria-hidden="true">
     <span class="line"></span>
     <span class="seal">{seal}</span>
@@ -46,6 +57,24 @@
   .sh.compact {
     margin-bottom: var(--space-3, 12px);
   }
+  .sh-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
+    padding: 6px 12px 6px 9px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    background: var(--paper-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    transition: transform 0.15s var(--ease), color 0.15s, border-color 0.15s;
+  }
+  .sh-back:active { transform: scale(0.96); }
+  .sh-back:hover { color: var(--ink); border-color: color-mix(in srgb, var(--city-accent, var(--cinabro)) 40%, var(--line-strong)); }
   .deco {
     display: flex;
     align-items: center;

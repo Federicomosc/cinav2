@@ -18,6 +18,8 @@
     "metro:fetch": "node scripts/fetch-metro-data.mjs",
     "places:images": "node scripts/download-poi-images.mjs",
     "offline:verify": "node scripts/verify-offline-assets.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:offline": "node scripts/test-offline.mjs",
     "offline:prepare": "npm run offline:verify && npm run tiles:all && npm run phrases:audio && npm run build"
   },
@@ -31,7 +33,8 @@
     "svelte-check": "^4.6.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.0",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

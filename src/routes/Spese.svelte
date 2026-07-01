@@ -7,6 +7,7 @@
   import { netBalances, settle } from '../lib/spese';
   import { cny, shortDate, toIsoDay } from '../lib/format';
   import { showToast } from '../lib/toast.svelte';
+  import { go } from '../lib/router.svelte';
 
   const members = itinerario.trip.members;
   const rate = itinerario.trip.cnyPerEur;
@@ -82,7 +83,7 @@
   }
 </script>
 
-<PageHeader eyebrow="¥ utility da campo" title="Spese & Valuta" sub="Converti al volo e tieni il saldo del gruppo." />
+<PageHeader eyebrow="¥ utility da campo" title="Spese & Valuta" sub="Converti al volo e tieni il saldo del gruppo." backLabel="Oggi" onback={() => go('oggi')} />
 
 {#if total > 0}
   <div class="stat-hero" style="--stat-accent: var(--gold)">

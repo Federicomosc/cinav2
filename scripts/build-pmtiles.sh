@@ -8,6 +8,9 @@ set -eo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$ROOT/public/tiles"
+# Cache dei parziali FUORI da public/: sono intermedi (fusi in cina.pmtiles) e
+# non devono finire nel deploy (dist/). Restano in cache per evitare ri-download.
+CACHE_DIR="$ROOT/.tiles-cache"
 TOOLS_DIR="$ROOT/tools"
 PMTILES_BIN="$TOOLS_DIR/pmtiles"
 OUT="$OUT_DIR/cina.pmtiles"
@@ -29,7 +32,7 @@ BBOXES=(
   "121.30,31.10,121.60,31.30"
 )
 
-mkdir -p "$OUT_DIR" "$TOOLS_DIR"
+mkdir -p "$OUT_DIR" "$TOOLS_DIR" "$CACHE_DIR"
 
 install_cli() {
   if [[ -x "$PMTILES_BIN" ]]; then return; fi
@@ -57,7 +60,7 @@ if [[ -f "$OUT" ]]; then
 fi
 
 PARTS=()
-overview="$OUT_DIR/_part_overview.pmtiles"
+overview="$CACHE_DIR/_part_overview.pmtiles"
 if [[ ! -f "$overview" ]]; then
   echo "↓ overview z0-${OVERVIEW_MAX_ZOOM}…"
   "$PMTILES_BIN" extract "$PLANET_URL" "$overview" \
@@ -69,7 +72,7 @@ PARTS+=("$overview")
 for i in "${!CITIES[@]}"; do
   city="${CITIES[$i]}"
   bbox="${BBOXES[$i]}"
-  part="$OUT_DIR/_part_${city}.pmtiles"
+  part="$CACHE_DIR/_part_${city}.pmtiles"
   if [[ ! -f "$part" ]]; then
     echo "↓ $city z${CITY_MIN_ZOOM}-${MAX_ZOOM}…"
     "$PMTILES_BIN" extract "$PLANET_URL" "$part" \

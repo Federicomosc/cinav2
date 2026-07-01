@@ -244,6 +244,8 @@
     justify-content: space-between;
     gap: 10px;
     margin-top: 8px;
+    /* lascia spazio al toggle tema fisso in alto a destra */
+    padding-right: 46px;
   }
   .eyebrow {
     font-family: var(--mono);
@@ -314,7 +316,8 @@
     font-family: var(--serif);
     font-weight: 700;
     font-size: 7.6rem;
-    line-height: 0.8;
+    line-height: 1;
+    padding-top: 0.08em;
     letter-spacing: -0.04em;
     background: linear-gradient(160deg, var(--cinabro-bright), var(--cinabro) 50%, var(--gold));
     -webkit-background-clip: text;

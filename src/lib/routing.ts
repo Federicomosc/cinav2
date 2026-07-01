@@ -52,6 +52,11 @@ async function getTileTemplate(): Promise<string | null> {
   return tileTemplatePromise;
 }
 
+/** Distanza in linea d'aria (metri) tra due punti [lng,lat]. */
+export function straightLineM(a: [number, number], b: [number, number]): number {
+  return haversineM(a[1], a[0], b[1], b[0]);
+}
+
 function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
   const φ1 = (lat1 * Math.PI) / 180;

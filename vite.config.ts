@@ -7,7 +7,11 @@ export default defineConfig({
   plugins: [
     svelte(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' invece di 'autoUpdate': un aggiornamento silenzioso ricarica la
+      // pagina mentre l'utente è nel mezzo di un form (spesa, documento cifrato)
+      // e fa perdere l'input non salvato. Con 'prompt' aspettiamo un gesto
+      // esplicito — vedi src/lib/pwa-update.svelte.ts + UpdateBanner.svelte.
+      registerType: 'prompt',
       // NB: non elencare qui font/phrases/places: sono già coperti da
       // `workbox.globPatterns` (woff2/pbf/m4a/jpg). Duplicarli genera due voci
       // di precache per file (una URL-encoded, una no) → manifest gonfio.

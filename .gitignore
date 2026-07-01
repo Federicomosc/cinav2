@@ -12,6 +12,7 @@ dist-ssr
 
 # Mappa offline generata (vedi scripts/) — grande, non versionare
 /public/tiles/*.pmtiles
-/public/tiles/_part_*.pmtiles
 /public/tiles/routing/
 /tools/pmtiles
+# Cache dei parziali pmtiles (intermedi, fuori dal deploy)
+/.tiles-cache/

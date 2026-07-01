@@ -6,6 +6,8 @@
   import type { CityId } from './data/types';
   import BottomNav from './components/BottomNav.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
+  import UpdateBanner from './components/UpdateBanner.svelte';
+  import BackupReminder from './components/BackupReminder.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
   import ToastStack from './components/ToastStack.svelte';
   import Oggi from './routes/Oggi.svelte';
@@ -81,7 +83,9 @@
     aria-hidden="true"
   ></div>
 
-  <ThemeToggle class="shell-theme" />
+  {#if !isMap}
+    <ThemeToggle class="shell-theme" />
+  {/if}
 
   <main
     class="screen"
@@ -90,6 +94,8 @@
     onscroll={onScreenScroll}
   >
     <OfflineBanner />
+    <UpdateBanner />
+    <BackupReminder />
     <ToastStack />
 
     {#if mapMounted}
@@ -111,15 +117,17 @@
 </div>
 
 <style>
+  /* Toggle tema: in alto a destra, fuori dalla zona-pollice e dal contenuto
+     (prima galleggiava in basso a sinistra sopra il testo). */
   :global(.shell-theme) {
     position: fixed;
-    bottom: calc(var(--nav-total-h) + 10px);
-    left: max(14px, calc(50% - 240px + 14px));
+    top: calc(var(--safe-top) + 8px);
+    right: max(10px, calc(50% - 240px + 10px));
     z-index: 55;
   }
   @media (max-width: 480px) {
     :global(.shell-theme) {
-      left: 14px;
+      right: 10px;
     }
   }
   /* Mappa tenuta viva ma fuori dalla tab attiva */

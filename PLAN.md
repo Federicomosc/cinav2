@@ -246,6 +246,28 @@ DocItem (cifrato), Meta (tasso CNY, profilo membri). Riusare le interfacce di `c
   > Resta da fare a ridosso della partenza: **un giorno intero reale** in modalità aereo sul telefono
   > (il test automatico copre l'app servita; il device prova anche eviction storage e installazione PWA).
 
+- [x] **Robustezza ingegneristica** · ✅ COMPLETATA (01/07/2026), non legata a una singola funzione:
+  - **Aggiornamento PWA non distruttivo**: `registerType` passato da `autoUpdate` a `prompt`
+    (`vite.config.ts`) + `lib/pwa-update.svelte.ts` + `UpdateBanner.svelte`. Prima un update del
+    service worker poteva ricaricare la pagina mentre si compilava una spesa o un documento
+    cifrato, perdendo l'input non salvato; ora l'utente decide quando aggiornare.
+  - **Promemoria di backup**: `exportBackup` (lib/backup.ts) scrive `lastBackupAt` in `meta`;
+    `BackupReminder.svelte` avvisa se non è mai stato fatto o è più vecchio di 10 giorni, con
+    link diretto a Documenti. *Verificato a runtime: appare senza backup, sparisce subito dopo
+    un export riuscito.* Riguarda spese/documenti/checklist — non copre ancora le foto (Fase 2,
+    escluse di proposito perché pesanti: da ripensare quando arriva l'import foto).
+  - **Test automatici**: prima c'era solo `test:offline` (E2E). Aggiunto Vitest con test unitari
+    su `spese.ts` (saldi/settle), `today.ts` (fase viaggio/countdown), `crypto.ts` (round-trip
+    AES-GCM, verifier) e `format.ts` (date/valuta) — 27 test, `npm test`.
+  - **CI minima**: `.github/workflows/ci.yml` esegue `check` + `test` + `build` su push/PR
+    (il repo aveva un remote GitHub ma nessuna CI).
+  - Bug trovato e corretto durante la verifica: il toggle tema (fixed, in alto a destra)
+    intercettava i click sui pulsanti dei nuovi banner — risolto mettendo testo e azioni su
+    righe separate in `UpdateBanner`/`BackupReminder`.
+  - Non toccato di proposito (richiede una decisione, non solo codice): sincronizzazione
+    multi-dispositivo per il gruppo (oggi solo export/import manuale) e lo split dei componenti
+    più grandi (`Mappa.svelte` 2747 righe, `Logistica.svelte` 1418, `Documenti.svelte` 1399).
+
 ### Fase 2 — I ricordi (~6–9 gg) · alto impatto, client-side
 - [ ] **Import foto** (2.a): selezione file (proprie + ricevute), lettura EXIF con `exifr`.
 - [ ] **Smistamento spazio-temporale** (2.b): data→città (incrocio itinerario), GPS→posizione;
@@ -284,6 +306,17 @@ DocItem (cifrato), Meta (tasso CNY, profilo membri). Riusare le interfacce di `c
 3. **Mappa offline** → **PMTiles** (file unico, richiede pipeline di tooling).
 4. **Audio frasario** → **Sì, clip mp3** pre-registrate per le frasi-chiave.
 5. **PWA/Capacitor** → **Capacitor da subito** (wrapper impostato in Fase 0).
+6. **Modello multi-dispositivo del gruppo** (01/07/2026) → **un telefono principale**, non
+   un'app per persona. L'architettura (Dexie singolo, membri come nomi in `itinerario.json`
+   e non account, cassaforte con un'unica password) presume che spese/checklist/documenti
+   siano gestiti da UN dispositivo condiviso o da chi si occupa dell'organizzazione — non da
+   4 istanze separate dell'app che divergerebbero senza che nessuno se ne accorga. Se un
+   secondo telefono serve (backup, o qualcuno vuole una copia personale), il ponte è
+   l'export/import cifrato di `lib/backup.ts`, ora condivisibile direttamente (AirDrop/
+   WhatsApp/Telegram) tramite Web Share API quando il browser la supporta — vedi
+   `BackupCard.svelte`. Non è stata costruita una sincronizzazione P2P automatica: già
+   scartata per v1 (§1.1) come non realizzabile in modo affidabile, e resterebbe vera anche
+   per v2.
 
 ---
 

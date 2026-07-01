@@ -4,6 +4,7 @@
   import PageHeader from '../components/PageHeader.svelte';
   import { emergenze, itinerario } from '../lib/content';
   import { db, type MedicalCard } from '../db/dexie';
+  import { go } from '../lib/router.svelte';
 
   const members = itinerario.trip.members;
 
@@ -43,7 +44,7 @@
   }
 </script>
 
-<PageHeader eyebrow="✚ sempre offline" title="Emergenze" sub="Numeri grandi e toccabili. Funziona senza rete." />
+<PageHeader eyebrow="✚ sempre offline" title="Emergenze" sub="Numeri grandi e toccabili. Funziona senza rete." backLabel="Oggi" onback={() => go('oggi')} />
 
 <div class="block-head">
   <h2 class="block-title">Emergenze cinesi</h2>

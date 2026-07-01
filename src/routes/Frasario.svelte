@@ -8,6 +8,7 @@
   import { db, now } from '../db/dexie';
   import { speak, speakHanzi, hasLocalAudio } from '../lib/speak';
   import { translateOffline } from '../lib/translate-offline';
+  import { go } from '../lib/router.svelte';
   import type { Frase, FraseCat } from '../data/types';
 
   type Mode = 'frasi' | 'traduci';
@@ -97,6 +98,8 @@
   sub={mode === 'frasi'
     ? 'Tocca una frase per mostrarla grande al tassista.'
     : 'Traduttore offline: cerca parole o frasi in italiano o hanzi.'}
+  backLabel="Oggi"
+  onback={() => go('oggi')}
 />
 
 <div class="mode-tabs" role="tablist" aria-label="Modalità frasario">

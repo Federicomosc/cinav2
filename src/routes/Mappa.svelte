@@ -9,15 +9,14 @@
     planPedestrianRoute,
     planItineraryRoute,
     formatDistanceM,
-    formatDurationS,
     hasLocalRoutingTiles,
+    straightLineM,
     AUTO_NAV_KEY,
     type NavPlan,
     type ItineraryPlan,
   } from '../lib/routing';
   import {
     computeNavProgress,
-    formatNavSummary,
     isOffRoute,
     sliceRouteAt,
     type NavProgress,
@@ -27,13 +26,15 @@
   import { speakNavInstruction, resetNavSpeech } from '../lib/nav-speak';
   import { resolveItineraryFromMapId } from '../lib/itinerary';
   import { longWalkSummary } from '../lib/walk-hints';
-  import { CAT_COLOR, CAT_ICON, CAT_LABEL } from '../lib/poi';
+  import { CAT_COLOR, CAT_ICON } from '../lib/poi';
   import { offlineMapStyle } from '../lib/mapStyle';
-  import { online } from '../lib/online.svelte';
   import { isOfflineAssetReady } from '../lib/offline-assets';
   import { CachedRangeSource } from '../lib/pmtiles-source';
-  import PoiPhoto from '../components/PoiPhoto.svelte';
   import ScreenHeader from '../components/ScreenHeader.svelte';
+  import MapTopChrome from '../components/MapTopChrome.svelte';
+  import ItinerarySheet from '../components/ItinerarySheet.svelte';
+  import NavPanel from '../components/NavPanel.svelte';
+  import MetroSheet from '../components/MetroSheet.svelte';
   import { cityTheme } from '../lib/city-theme';
   import { metroForCity, metroGeoJSON, type MetroStation } from '../lib/metro';
   import {
@@ -42,9 +43,7 @@
     metroRouteInstructions,
     type MetroRoutePlan,
   } from '../lib/metro-route';
-  import type { CityId, PoiCategory } from '../data/types';
-
-  const LEGEND: PoiCategory[] = ['storico', 'moderno', 'natura', 'intrattenimento', 'cibo'];
+  import type { CityId } from '../data/types';
 
   let mapEl: HTMLDivElement;
   let map: MlMap | null = null;
@@ -73,6 +72,8 @@
   let navPlan = $state<NavPlan | null>(null);
   let navLoading = $state(false);
   let navError = $state('');
+  let tooFar = $state(false);
+  let sampleRoute = $state(false);
   let navigating = $state(false);
   let navProgress = $state<NavProgress | null>(null);
   let lastNavStepIdx = $state(-1);
@@ -157,6 +158,15 @@
   });
 
   const metroRouteSteps = $derived(metroRoutePlan ? metroRouteInstructions(metroRoutePlan) : []);
+
+  // Clearing a route search field deselects its station, so the planned
+  // route (and the line drawn on the map) disappears with it.
+  $effect(() => {
+    if (routeFromId && routeFromQ.trim() === '') routeFromId = null;
+  });
+  $effect(() => {
+    if (routeToId && routeToQ.trim() === '') routeToId = null;
+  });
 
   function resetMetroRoute() {
     routeFromId = null;
@@ -285,6 +295,8 @@
     navPlan = null;
     navError = '';
     navLoading = false;
+    tooFar = false;
+    sampleRoute = false;
     navAbort?.abort();
     navAbort = null;
     if (!map) return;
@@ -632,9 +644,22 @@
     if (!poi || !map) return;
     navLoading = true;
     navError = '';
+    tooFar = false;
+    sampleRoute = false;
     const from = await ensureUserPosition();
     if (!from) {
       navError = 'Impossibile ottenere il GPS. Attiva la posizione e riprova all’aperto.';
+      navLoading = false;
+      return;
+    }
+    // Gate distanza: oltre ~40 km il percorso a piedi non ha senso (es. sei in
+    // Italia prima di partire). Niente calcolo assurdo: resta la scheda del POI.
+    const asCrowM = straightLineM(from, [poi.lng, poi.lat]);
+    if (asCrowM > 40_000) {
+      navPlan = null;
+      clearNavRoute();
+      tooFar = true;
+      navError = `Sei a ${formatDistanceM(asCrowM)} in linea d'aria: il percorso a piedi apparirà quando sarai in zona.`;
       navLoading = false;
       return;
     }
@@ -653,6 +678,35 @@
     } catch (e) {
       if (!(e instanceof DOMException && e.name === 'AbortError')) {
         navError = 'Percorso non disponibile. Riprova con connessione o zoom sulla zona.';
+      }
+    } finally {
+      navLoading = false;
+    }
+  }
+
+  /**
+   * Prova le indicazioni con una posizione SIMULATA vicino al POI: utile per
+   * verificare il routing offline della città quando sei lontano (es. in Italia).
+   * Parte da ~700 m dal luogo, sulle strade reali della città.
+   */
+  async function previewSampleRoute() {
+    const poi = navDestPoi;
+    if (!poi || !map) return;
+    navLoading = true;
+    navError = '';
+    const start: [number, number] = [poi.lng + 0.006, poi.lat + 0.006];
+    navAbort?.abort();
+    navAbort = new AbortController();
+    try {
+      const plan = await planPedestrianRoute(start, [poi.lng, poi.lat], navAbort.signal);
+      navPlan = plan;
+      drawNavRoute(plan.coordinates);
+      fitNavBounds(plan.coordinates);
+      tooFar = false;
+      sampleRoute = true;
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        navError = 'Percorso di esempio non disponibile per questa città.';
       }
     } finally {
       navLoading = false;
@@ -1226,54 +1280,16 @@
   {/if}
 
   {#if !navigating && !activeItin && !navDestPoi}
-    <div class="map-chrome">
-      <div class="map-top">
-        <div class="cities" role="tablist" aria-label="Città">
-          {#each citta as c (c.id)}
-            {@const th = cityTheme(c.id)}
-            <button
-              type="button"
-              class="city"
-              class:on={activeCity === c.id}
-              style={activeCity === c.id ? `--c:${th.accent}` : undefined}
-              role="tab"
-              aria-selected={activeCity === c.id}
-              onclick={() => flyTo(c.id)}
-            >{c.name}</button>
-          {/each}
-        </div>
-
-        <div class="layer-tabs" role="tablist" aria-label="Vista mappa">
-          <button type="button" class="layer-tab" class:on={mapLayer === 'poi'} role="tab" aria-selected={mapLayer === 'poi'} onclick={() => setMapLayer('poi')}>POI</button>
-          <button type="button" class="layer-tab" class:on={mapLayer === 'metro'} role="tab" aria-selected={mapLayer === 'metro'} onclick={() => setMapLayer('metro')}>Metro</button>
-          <button type="button" class="layer-tab" class:on={mapLayer === 'route'} role="tab" aria-selected={mapLayer === 'route'} onclick={() => setMapLayer('route')}>Tappe</button>
-        </div>
-      </div>
-
-      {#if mapLayer === 'poi'}
-        <div class="map-bottom">
-          <div class="map-info-row">
-            {#each LEGEND as cat (cat)}
-              <span class="lg">
-                <span class="lg-ic" style="border-color:{CAT_COLOR[cat]}; color:{CAT_COLOR[cat]}">{CAT_ICON[cat]}</span>
-                {CAT_LABEL[cat]}
-              </span>
-            {/each}
-          </div>
-          <div class="map-status-line">
-            {#if tilesAvailable}
-              <span class="map-status ok">
-                {#if !online.network}✈ Offline{:else}✓ Online{/if}
-                · mappa{#if routingOffline} · routing{/if}
-              </span>
-            {:else}
-              <span class="map-status warn">🌐 Mappa online</span>
-            {/if}
-            {#if geoNote}<span class="map-status geo">{geoNote}</span>{/if}
-          </div>
-        </div>
-      {/if}
-    </div>
+    <MapTopChrome
+      {citta}
+      {activeCity}
+      {mapLayer}
+      {tilesAvailable}
+      {routingOffline}
+      {geoNote}
+      onFlyTo={flyTo}
+      onSetLayer={setMapLayer}
+    />
   {/if}
 
   {#if !navDestPoi && mapLayer !== 'metro'}
@@ -1291,308 +1307,73 @@
   {/if}
 
   {#if activeItin}
-    <aside
-      class="itin-sheet"
-      class:dragging={itinDragging}
-      style="height: {itinSheetH}px"
-      aria-label="Itinerario {activeItin.title}"
-    >
-      <div
-        class="itin-grab"
-        role="separator"
-        aria-orientation="horizontal"
-        aria-valuenow={itinSheetH}
-        aria-valuemin={ITIN_H_MIN}
-        aria-valuemax={maxItinSheetH()}
-        aria-label="Trascina per ridimensionare il pannello"
-        onpointerdown={onItinDragStart}
-        onpointermove={onItinDragMove}
-        onpointerup={onItinDragEnd}
-        onpointercancel={onItinDragEnd}
-      >
-        <span class="itin-grab-bar" aria-hidden="true"></span>
-      </div>
-      <div class="itin-sheet-head">
-        <div class="itin-head-main">
-          <span class="nav-label">Itinerario</span>
-          <strong class="itin-sheet-title">{activeItin.title}</strong>
-          {#if itinPlan && itinPlan.distanceM > 0}
-            <p class="nav-meta">
-              {formatDistanceM(itinPlan.distanceM)} · {formatDurationS(itinPlan.durationS)} a piedi
-              {#if itinPlan.fallback}<span class="nav-fallback"> · stima</span>{/if}
-            </p>
-          {:else if itinLoading}
-            <p class="nav-meta muted">Calcolo percorso…</p>
-          {/if}
-        </div>
-        <div class="itin-size-btns" role="group" aria-label="Dimensione pannello">
-          <button type="button" class="size-btn" class:on={itinSheetH <= ITIN_H_MIN + 12} onclick={() => setItinSheetH(ITIN_H_MIN)} title="Minimo">S</button>
-          <button type="button" class="size-btn" class:on={itinSheetH > ITIN_H_MIN + 12 && itinSheetH < maxItinSheetH() - 40} onclick={() => setItinSheetH(220)} title="Medio">M</button>
-          <button type="button" class="size-btn" class:on={itinSheetH >= maxItinSheetH() - 40} onclick={() => setItinSheetH(maxItinSheetH())} title="Massimo">L</button>
-        </div>
-        <button class="itin-close" onclick={closeItinerary} aria-label="Chiudi itinerario">×</button>
-      </div>
-
-      <div class="itin-sheet-scroll">
-        {#if itinCompact}
-          <div class="itin-compact-stops" aria-hidden="true">
-            {#each activeItin.stops as p, i (p.id)}
-              <span class="itin-compact-dot" title={p.name}>{i + 1}</span>
-              {#if i < activeItin.stops.length - 1}<span class="itin-compact-line"></span>{/if}
-            {/each}
-          </div>
-          <p class="itin-expand-hint">Trascina ↑ o tocca M / L per dettagli</p>
-        {:else}
-          {#if itinPlan && itinPlan.legs.length > 1}
-            <div class="itin-legs" role="tablist" aria-label="Tratti">
-              {#each itinPlan.legs as _, i (i)}
-                <button
-                  type="button"
-                  class="itin-leg-tab"
-                  class:on={itinLegIdx === i}
-                  role="tab"
-                  aria-selected={itinLegIdx === i}
-                  onclick={() => selectItinLeg(i)}
-                >
-                  {i + 1}→{i + 2}
-                </button>
-              {/each}
-            </div>
-          {/if}
-
-          {#if itinPlan?.legs[itinLegIdx]?.steps?.length}
-            <ol class="itin-directions" aria-label="Indicazioni stradali">
-              {#each itinPlan.legs[itinLegIdx].steps as step, i (i)}
-                <li class="itin-dir">
-                  <span class="itin-dir-text">{step.instruction}</span>
-                  {#if step.distanceM > 0}
-                    <span class="itin-dir-meta">{formatDistanceM(step.distanceM)}</span>
-                  {/if}
-                </li>
-              {/each}
-            </ol>
-          {:else if itinPlan && !itinLoading}
-            <p class="itin-dir-empty muted">Indicazioni dettagliate non disponibili per questo tratto.</p>
-          {/if}
-
-          <ol class="itin-stops">
-            {#each activeItin.stops as p, i (p.id)}
-              <li>
-                <button class="itin-stop" onclick={() => focusPoi(p.id)}>
-                  <span class="itin-stop-num">{i + 1}</span>
-                  <PoiPhoto id={p.id} category={p.category} name={p.name} variant="thumb" />
-                  <span class="itin-stop-body">
-                    <span class="itin-stop-name">{p.name}</span>
-                    <span class="itin-stop-cat" style="--c:{CAT_COLOR[p.category]}">{CAT_LABEL[p.category]}</span>
-                  </span>
-                  <span class="itin-stop-go" aria-hidden="true">›</span>
-                </button>
-              </li>
-            {/each}
-          </ol>
-        {/if}
-
-        {#if itinWalkHint && !itinCompact}
-          <p class="walk-hint-sheet">{itinWalkHint}</p>
-        {/if}
-        {#if itinError}<p class="nav-err">{itinError}</p>{/if}
-        {#if itinPlan?.fallback && !itinError && activeItin.stops.length > 1 && !itinCompact}
-          <p class="nav-hint">Alcuni tratti sono stime — serve connessione o tile routing locali.</p>
-        {/if}
-      </div>
-    </aside>
+    <ItinerarySheet
+      {activeItin}
+      {itinPlan}
+      {itinLoading}
+      {itinError}
+      {itinSheetH}
+      itinHMin={ITIN_H_MIN}
+      {itinCompact}
+      {itinLegIdx}
+      {itinDragging}
+      {itinWalkHint}
+      {maxItinSheetH}
+      onDragStart={onItinDragStart}
+      onDragMove={onItinDragMove}
+      onDragEnd={onItinDragEnd}
+      onSetSheetH={(h) => setItinSheetH(h)}
+      onSelectLeg={selectItinLeg}
+      onClose={closeItinerary}
+      onFocusPoi={focusPoi}
+    />
   {:else if navDestPoi}
-    {#if navigating}
-      <div class="nav-hud" aria-live="polite" aria-label="Navigazione attiva">
-        {#if navProgress?.arrived}
-          <p class="nav-hud-dist">◎</p>
-          <p class="nav-hud-main">Sei arrivato</p>
-          <p class="nav-hud-sub">{navDestPoi.name}</p>
-        {:else if navProgress}
-          <p class="nav-hud-dist">{formatDistanceM(navProgress.distanceToStepM)}</p>
-          <p class="nav-hud-main">
-            {navPlan?.steps?.[navProgress.stepIndex]?.instruction ?? 'Prosegui'}
-          </p>
-          <p class="nav-hud-sub">
-            {formatNavSummary(navProgress.distanceRemainingM, navProgress.durationRemainingS)}
-            {#if rerouteBusy} · ricalcolo…{:else if isOffRoute(navProgress.offRouteM)} · fuori percorso{/if}
-          </p>
-        {:else}
-          <p class="nav-hud-main">Acquisizione GPS…</p>
-        {/if}
-        <div class="nav-hud-actions">
-          <button
-            type="button"
-            class="nav-hud-btn"
-            class:on={navVoice}
-            onclick={() => (navVoice = !navVoice)}
-            aria-pressed={navVoice}
-          >
-            {navVoice ? '🔊' : '🔇'}
-          </button>
-          <button type="button" class="nav-hud-btn stop" onclick={stopNavigation}>Stop</button>
-          <button type="button" class="nav-hud-btn" onclick={recenter}>Centra</button>
-        </div>
-        {#if navPlan?.steps && navPlan.steps.length > 1 && !navProgress?.arrived}
-          <ol class="nav-hud-steps" aria-label="Prossime indicazioni">
-            {#each navPlan.steps.slice(navProgress?.stepIndex ?? 0, (navProgress?.stepIndex ?? 0) + 3) as step, i (i)}
-              <li class:current={i === 0}>
-                <span>{step.instruction}</span>
-                {#if step.distanceM > 0 && i === 0}<em>{formatDistanceM(step.distanceM)}</em>{/if}
-              </li>
-            {/each}
-          </ol>
-        {/if}
-      </div>
-    {:else}
-    <aside class="nav-sheet" aria-label="Navigazione verso {navDestPoi.name}">
-      <PoiPhoto id={navDestPoi.id} category={navDestPoi.category} name={navDestPoi.name} variant="hero" />
-      <div class="nav-head">
-        <span class="nav-label">Destinazione</span>
-        <strong class="nav-name">{navDestPoi.name}</strong>
-        {#if navPlan}
-          <p class="nav-meta">
-            {formatDistanceM(navPlan.distanceM)} · {formatDurationS(navPlan.durationS)} a piedi
-            {#if navPlan.fallback}<span class="nav-fallback"> · stima</span>{/if}
-            {#if routingOffline && !navPlan.fallback}<span class="nav-offline"> · offline</span>{/if}
-          </p>
-        {/if}
-      </div>
-      {#if navPlan?.steps?.length && navPlan.steps.length > 1}
-        <ol class="nav-directions" aria-label="Anteprima indicazioni">
-          {#each navPlan.steps.slice(0, 4) as step, i (i)}
-            <li class="nav-dir">
-              <span>{step.instruction}</span>
-              {#if step.distanceM > 0}<em>{formatDistanceM(step.distanceM)}</em>{/if}
-            </li>
-          {/each}
-          {#if navPlan.steps.length > 4}
-            <li class="nav-dir more">+{navPlan.steps.length - 4} passaggi</li>
-          {/if}
-        </ol>
-      {/if}
-      <div class="nav-actions">
-        {#if navPlan}
-          <button class="nav-btn ghost" onclick={closeNavSheet}>Chiudi</button>
-          <button class="nav-btn secondary" onclick={() => startNavigation()} disabled={navLoading}>
-            {navLoading ? '…' : 'Aggiorna'}
-          </button>
-          <button class="nav-btn primary wide" onclick={beginNavigation} disabled={navLoading || !navPlan}>
-            Avvia navigazione
-          </button>
-        {:else}
-          <button class="nav-btn primary wide" onclick={() => startNavigation()} disabled={navLoading}>
-            {navLoading ? 'Calcolo percorso…' : 'Calcola percorso'}
-          </button>
-        {/if}
-      </div>
-      {#if navError}<p class="nav-err">{navError}</p>{/if}
-      {#if navPlan?.fallback && !navError && !routingOffline}
-        <p class="nav-hint">Percorso stimato — installa i tile routing (<code>npm run tiles:routing</code>) per strade reali offline.</p>
-      {:else if navPlan && routingOffline && !navPlan.fallback}
-        <p class="nav-hint ok-hint">Percorso pedonale offline sulle strade reali.</p>
-      {/if}
-    </aside>
-    {/if}
+    <NavPanel
+      {navDestPoi}
+      {navigating}
+      {navProgress}
+      {navPlan}
+      {navError}
+      {navLoading}
+      {tooFar}
+      {sampleRoute}
+      {navVoice}
+      {routingOffline}
+      {rerouteBusy}
+      onToggleVoice={() => (navVoice = !navVoice)}
+      onStop={stopNavigation}
+      onRecenter={recenter}
+      onClose={closeNavSheet}
+      onStart={() => startNavigation()}
+      onPreviewSample={previewSampleRoute}
+      onBegin={beginNavigation}
+    />
   {/if}
 
   {#if !activeItin && !navDestPoi && mapLayer === 'metro'}
-    <aside class="metro-sheet" class:route-tab={metroSheetTab === 'route'} aria-label="Metro {activeCityMeta?.name}">
-      {#if !metroData.hasMetro}
-        <p class="metro-empty">{metroData.note}</p>
-      {:else}
-        <div class="metro-sheet-tabs" role="tablist" aria-label="Modalità metro">
-          <button type="button" class="m-tab" class:on={metroSheetTab === 'route'} role="tab" aria-selected={metroSheetTab === 'route'} onclick={() => (metroSheetTab = 'route')}>Percorso</button>
-          <button type="button" class="m-tab" class:on={metroSheetTab === 'list'} role="tab" aria-selected={metroSheetTab === 'list'} onclick={() => (metroSheetTab = 'list')}>Fermate</button>
-        </div>
-
-        {#if metroSheetTab === 'route'}
-          <div class="route-fields">
-            <label class="route-field">
-              <span class="route-lbl">Da</span>
-              <input
-                class="metro-search"
-                type="search"
-                placeholder="Stazione di partenza…"
-                bind:value={routeFromQ}
-                onfocus={() => (pickField = 'from')}
-              />
-              {#if routeFromPicks.length}
-                <ul class="route-picks">
-                  {#each routeFromPicks as st (st.id)}
-                    <li><button type="button" class="route-pick" onclick={() => selectRouteStation('from', st)}>{st.nameLocal} · {st.name}</button></li>
-                  {/each}
-                </ul>
-              {/if}
-            </label>
-            <button type="button" class="route-swap" onclick={swapRouteEnds} aria-label="Inverti partenza e arrivo">⇅</button>
-            <label class="route-field">
-              <span class="route-lbl">A</span>
-              <input
-                class="metro-search"
-                type="search"
-                placeholder="Stazione di arrivo…"
-                bind:value={routeToQ}
-                onfocus={() => (pickField = 'to')}
-              />
-              {#if routeToPicks.length}
-                <ul class="route-picks">
-                  {#each routeToPicks as st (st.id)}
-                    <li><button type="button" class="route-pick" onclick={() => selectRouteStation('to', st)}>{st.nameLocal} · {st.name}</button></li>
-                  {/each}
-                </ul>
-              {/if}
-            </label>
-          </div>
-
-          {#if routeFromId && routeToId && routeFromId === routeToId}
-            <p class="route-err">Partenza e arrivo devono essere diverse.</p>
-          {:else if routeFromId && routeToId && !metroRoutePlan}
-            <p class="route-err">Nessun collegamento metro tra queste due fermate nei dati offline.</p>
-          {:else if metroRoutePlan}
-            <div class="route-summary">
-              <span class="route-meta">{metroRoutePlan.stops} fermate{#if metroRoutePlan.transfers} · {metroRoutePlan.transfers} {metroRoutePlan.transfers === 1 ? 'cambio' : 'cambi'}{/if}</span>
-            </div>
-            <ol class="route-steps">
-              {#each metroRouteSteps as step, i (i)}
-                <li class="route-step">{step}</li>
-              {/each}
-            </ol>
-          {:else}
-            <p class="route-hint">Scegli due stazioni per sapere quali linee prendere.</p>
-          {/if}
-        {:else}
-          <input class="metro-search" type="search" placeholder="Cerca fermata…" bind:value={metroQuery} />
-          <div class="metro-line-row">
-            <button type="button" class="m-line" class:on={metroLineFilter === 'all'} onclick={() => (metroLineFilter = 'all')}>Tutte</button>
-            {#each metroData.lines as line (line.id)}
-              <button
-                type="button"
-                class="m-line"
-                class:on={metroLineFilter === line.id}
-                style="--lc:{line.color}"
-                onclick={() => (metroLineFilter = line.id)}
-                title={line.nameLocal}
-              >{line.number}</button>
-            {/each}
-          </div>
-          <ul class="metro-rows">
-            {#each metroStationsFiltered as st (st.id)}
-              <li>
-                <button type="button" class="m-row" onclick={() => flyToMetroStation(st)}>
-                  <span class="m-dot" style="background:{stationLineColor(st)}"></span>
-                  <span class="m-label">
-                    <span class="m-hanzi">{st.nameLocal}</span>
-                    <span class="m-it">{st.name}</span>
-                  </span>
-                  {#if st.nearPoi}<span class="m-poi">POI</span>{/if}
-                </button>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      {/if}
-    </aside>
+    <MetroSheet
+      {metroData}
+      {activeCityMeta}
+      {metroSheetTab}
+      bind:metroQuery
+      {metroLineFilter}
+      bind:routeFromQ
+      bind:routeToQ
+      {routeFromId}
+      {routeToId}
+      {routeFromPicks}
+      {routeToPicks}
+      {metroRoutePlan}
+      {metroRouteSteps}
+      {metroStationsFiltered}
+      onSetTab={(t) => (metroSheetTab = t)}
+      onSetLineFilter={(id) => (metroLineFilter = id)}
+      onPickField={(f) => (pickField = f)}
+      onSelectStation={selectRouteStation}
+      onSwap={swapRouteEnds}
+      onFlyToStation={flyToMetroStation}
+      {stationLineColor}
+    />
   {/if}
 </div>
 </div>
@@ -1634,10 +1415,6 @@
   .mappa-page.navigating-mode :global(.map-screen-head),
   .mappa-page.itin-mode :global(.map-screen-head) { display: none; }
 
-  .mappa-page.navigating-mode .map-top,
-  .mappa-page.navigating-mode .map-bottom {
-    display: none;
-  }
   .mappa-page.navigating-mode .map-stage {
     min-height: calc(100dvh - var(--safe-top) - var(--nav-total-h) - 24px);
   }
@@ -1705,17 +1482,7 @@
   }
 
   /* ── Chrome flottante ── */
-  .map-chrome {
-    position: absolute;
-    inset: 0;
-    z-index: 6;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 10px 10px 12px;
-  }
-  .map-chrome > * { pointer-events: auto; }
+  /* .map-chrome vive in MapTopChrome.svelte (proprio wrapper interno). */
   /* Chiusura fullscreen: × compatto in alto a destra, fuori dal flusso del
      chrome (così città in alto e legenda in basso restano al loro posto). */
   .fs-close {
@@ -1736,169 +1503,8 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
   .fs-close:active { transform: scale(0.94); }
-  /* Zona alta: ricerca + città + vista (controlli leggeri, niente cardone) */
-  .map-top {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .map-top .cities {
-    width: 100%;
-  }
-  .map-top .layer-tabs {
-    align-self: center;
-  }
-  /* In fullscreen: città più strette (lasciano il pulsante × in alto a destra),
-     e legenda/stato nascosti per una vista mappa pulita. */
-  .map-stage.fullscreen .cities {
-    width: calc(100% - 52px);
-  }
-  .map-stage.fullscreen .map-bottom {
-    display: none;
-  }
-  /* Zona bassa: legenda + stato (solo modalità POI) */
-  .map-bottom {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .cities {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 2px 0;
-  }
-  .cities::-webkit-scrollbar { display: none; }
-  .city {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-pill);
-    padding: 6px 12px;
-    background: color-mix(in srgb, var(--surface) 75%, transparent);
-    color: var(--ink-faint);
-    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.12s;
-  }
-  .city.on {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--c, var(--jade)) 92%, #000), var(--c, var(--jade)));
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--c, var(--jade)) 35%, transparent);
-  }
-  .city:active { transform: scale(0.97); }
-
-  .layer-tabs {
-    display: inline-grid;
-    grid-auto-flow: column;
-    gap: 3px;
-    padding: 4px;
-    background: color-mix(in srgb, #000 50%, transparent);
-    backdrop-filter: saturate(1.4) blur(8px);
-    -webkit-backdrop-filter: saturate(1.4) blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: var(--radius-pill);
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
-  }
-  .layer-tab {
-    padding: 7px 20px;
-    border: none;
-    border-radius: var(--radius-pill);
-    background: transparent;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.62);
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-  }
-  .layer-tab.on {
-    background: #fff;
-    color: #14110d;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
-  }
-
-  /* Stato (in alto, sotto le città): una riga compatta, mai a capo */
-  .map-status-line {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    max-width: 100%;
-  }
-  /* Legenda categorie (in basso, sopra il segmentato): centrata, scorrevole */
-  .map-info-row {
-    max-width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 1px;
-  }
-  .map-info-row::-webkit-scrollbar { display: none; }
-  .map-status {
-    flex: 0 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 5px 10px;
-    border-radius: var(--radius-pill);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line-strong);
-    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
-    color: var(--ink-soft);
-  }
-  .map-status.ok { flex: none; }
-  .map-status.ok {
-    color: var(--jade-bright);
-    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
-    background: color-mix(in srgb, var(--jade) 12%, transparent);
-  }
-  .map-status.warn {
-    color: var(--cinabro-bright);
-    background: var(--cinabro-soft);
-  }
-  .map-status.geo { color: var(--gold); }
-
-  .lg {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: #fff;
-    padding: 5px 10px 5px 6px;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, #000 52%, transparent);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-  .lg-ic {
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    font-size: 11px;
-    border-radius: 7px;
-    border: 1.5px solid;
-    background: color-mix(in srgb, currentColor 15%, transparent);
-  }
+  /* Stile città/legenda/stato in fullscreen: gestito in MapTopChrome.svelte
+     (regole :global su .map-stage.fullscreen, l'ancestor vive qui). */
 
   /* ── FABs ── */
   .map-fabs {
@@ -1939,688 +1545,6 @@
       0 4px 16px color-mix(in srgb, var(--jade) 25%, transparent),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-
-  .metro-sheet {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    z-index: 5;
-    max-height: 38%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
-    backdrop-filter: saturate(1.4) blur(8px);
-    -webkit-backdrop-filter: saturate(1.4) blur(8px);
-    border: 1px solid color-mix(in srgb, var(--map-accent) 22%, var(--line-strong));
-    border-radius: var(--radius-md);
-    box-shadow:
-      var(--shadow-lg),
-      0 0 24px color-mix(in srgb, var(--map-accent) 10%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  }
-  .metro-sheet.route-tab {
-    max-height: 52%;
-  }
-  /* In fullscreen la stage è fixed a 100dvh: il pannello va alzato sopra
-     l'home indicator (il bottom assoluto è relativo al bordo schermo). */
-  .map-stage.fullscreen .metro-sheet {
-    bottom: calc(14px + var(--safe-bottom));
-  }
-  .metro-sheet-tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    padding: 3px;
-    background: var(--paper-2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line);
-    flex: none;
-  }
-  .m-tab {
-    padding: 7px 8px;
-    border: none;
-    border-radius: calc(var(--radius-sm) - 2px);
-    background: transparent;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--ink-faint);
-  }
-  .m-tab.on {
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--shadow-sm);
-  }
-  .route-fields {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 6px;
-    align-items: start;
-    flex: none;
-  }
-  .route-field {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .route-lbl {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-  .route-swap {
-    align-self: end;
-    width: 34px;
-    height: 34px;
-    margin-bottom: 2px;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink-soft);
-    font-size: 15px;
-  }
-  .route-picks {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 2px);
-    z-index: 8;
-    list-style: none;
-    margin: 0;
-    padding: 4px;
-    background: var(--surface-elevated);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
-    max-height: min(220px, 40vh);
-    overflow-y: auto;
-  }
-  .route-pick {
-    width: 100%;
-    text-align: left;
-    padding: 8px 8px;
-    border: none;
-    border-radius: var(--radius-xs);
-    background: none;
-    color: var(--ink);
-    font-size: 0.8rem;
-  }
-  .route-pick:active { background: var(--paper-2); }
-  .route-summary { flex: none; }
-  .route-meta {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--gold);
-    letter-spacing: 0.04em;
-  }
-  .route-steps {
-    margin: 0;
-    padding: 0 0 0 18px;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  }
-  .route-step {
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: var(--ink-body);
-    margin-bottom: 8px;
-  }
-  .route-hint, .route-err {
-    margin: 0;
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: var(--ink-faint);
-  }
-  .route-err { color: var(--cinabro-bright); }
-  .metro-empty {
-    margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    color: var(--ink-faint);
-  }
-  .metro-search {
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink);
-    font: inherit;
-    font-size: 0.88rem;
-  }
-  .metro-line-row {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex: none;
-  }
-  .metro-line-row::-webkit-scrollbar { display: none; }
-  .m-line {
-    flex: none;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: var(--radius-pill);
-    border: 2px solid var(--lc, var(--line-strong));
-    background: color-mix(in srgb, var(--lc, var(--surface)) 20%, var(--surface));
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-  .m-line.on {
-    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--lc, var(--gold));
-  }
-  .metro-rows {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  }
-  .m-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 4px;
-    border: none;
-    border-bottom: 1px solid var(--line);
-    background: none;
-    color: inherit;
-    text-align: left;
-  }
-  .m-row:last-child { border-bottom: none; }
-  .m-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex: none;
-  }
-  .m-label {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  .m-hanzi {
-    font-family: var(--hanzi);
-    font-size: 1rem;
-    color: var(--ink);
-    line-height: 1.2;
-  }
-  .m-it {
-    font-size: 0.78rem;
-    color: var(--ink-faint);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .m-poi {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--jade-bright);
-  }
-  .nav-sheet {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    z-index: 5;
-    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
-    backdrop-filter: saturate(1.4) blur(8px);
-    -webkit-backdrop-filter: saturate(1.4) blur(8px);
-    border: 1px solid color-mix(in srgb, var(--jade) 28%, var(--line-strong));
-    border-radius: var(--radius-md);
-    padding: 14px 16px;
-    box-shadow:
-      var(--shadow-lg),
-      0 0 28px color-mix(in srgb, var(--jade) 12%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  }
-  .nav-label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    margin-bottom: 4px;
-  }
-  .nav-name { font-size: 1rem; color: var(--ink); }
-  .nav-meta {
-    margin: 6px 0 0;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--jade-bright);
-  }
-  .nav-fallback { color: var(--ink-faint); }
-  .nav-offline { color: var(--jade-bright); }
-  .nav-directions {
-    list-style: none;
-    margin: 10px 0 0;
-    padding: 10px 0 0;
-    border-top: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 120px;
-    overflow-y: auto;
-  }
-  .nav-dir {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 0.82rem;
-    line-height: 1.4;
-    color: var(--ink-body);
-  }
-  .nav-dir em {
-    font-style: normal;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--ink-faint);
-    flex: none;
-  }
-  .nav-dir.more { color: var(--ink-faint); font-size: 0.78rem; }
-  .nav-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .nav-btn {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    border-radius: var(--radius-pill);
-    padding: 10px 12px;
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink-soft);
-  }
-  .nav-btn.primary {
-    flex: 1.4;
-    border-color: var(--jade);
-    background: linear-gradient(135deg, var(--jade) 0%, #2d8a62 100%);
-    color: #fff;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--jade) 30%, transparent);
-  }
-  .nav-btn.secondary {
-    flex: none;
-    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
-    color: var(--jade-bright);
-  }
-  .nav-btn.wide { flex: 1 1 100%; }
-  .nav-btn.ghost { flex: none; }
-  .nav-btn:disabled { opacity: 0.6; }
-  .nav-hud {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    top: 10px;
-    z-index: 7;
-    padding: 14px 16px 12px;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
-    backdrop-filter: saturate(1.4) blur(8px);
-    -webkit-backdrop-filter: saturate(1.4) blur(8px);
-    border: 1px solid color-mix(in srgb, var(--jade) 35%, var(--line-strong));
-    box-shadow: var(--shadow-lg), 0 0 32px color-mix(in srgb, var(--jade) 15%, transparent);
-  }
-  .nav-hud-dist {
-    font-family: var(--serif);
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--jade-bright);
-    margin-bottom: 4px;
-  }
-  .nav-hud-main {
-    font-size: 1.05rem;
-    font-weight: 600;
-    line-height: 1.3;
-    color: var(--ink);
-  }
-  .nav-hud-sub {
-    margin-top: 6px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--ink-faint);
-  }
-  .nav-hud-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .nav-hud-btn {
-    flex: 1;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 9px 12px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink-soft);
-  }
-  .nav-hud-btn.stop {
-    color: var(--cinabro-bright);
-    border-color: color-mix(in srgb, var(--cinabro) 35%, var(--line));
-  }
-  .nav-hud-btn.on {
-    color: var(--jade-bright);
-    border-color: color-mix(in srgb, var(--jade) 40%, var(--line));
-    background: color-mix(in srgb, var(--jade) 12%, var(--surface));
-  }
-  .nav-hud-steps {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 10px 0 0;
-    border-top: 1px solid var(--line);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 88px;
-    overflow-y: auto;
-  }
-  .nav-hud-steps li {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 0.78rem;
-    color: var(--ink-faint);
-    line-height: 1.35;
-  }
-  .nav-hud-steps li.current {
-    color: var(--ink);
-    font-weight: 600;
-  }
-  .nav-hud-steps em {
-    font-style: normal;
-    font-family: var(--mono);
-    font-size: 9px;
-    flex: none;
-  }
-  .nav-err, .nav-hint {
-    margin: 10px 0 0;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: var(--cinabro-bright);
-  }
-  .nav-hint { color: var(--ink-faint); }
-  .nav-hint.ok-hint { color: var(--jade-bright); }
-
-  .itin-sheet {
-    position: absolute;
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    z-index: 6;
-    display: flex;
-    flex-direction: column;
-    background: var(--sheet-bg-solid);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-md);
-    padding: 4px 12px 8px;
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    transition: box-shadow 0.15s;
-  }
-  .itin-sheet.dragging {
-    box-shadow: var(--shadow-lg), 0 0 0 1px var(--cinabro);
-  }
-  .itin-grab {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding: 10px 0 6px;
-    cursor: ns-resize;
-    touch-action: none;
-    flex: none;
-  }
-  .itin-grab-bar {
-    width: 40px;
-    height: 5px;
-    border-radius: 3px;
-    background: var(--line-strong);
-  }
-  .itin-sheet.dragging .itin-grab-bar {
-    background: var(--cinabro);
-    width: 48px;
-  }
-  .itin-sheet-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .itin-size-btns {
-    display: flex;
-    gap: 4px;
-    flex: none;
-  }
-  .size-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 1px solid var(--line-strong);
-    background: var(--paper-2);
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--ink-faint);
-  }
-  .size-btn.on {
-    background: var(--cinabro);
-    border-color: var(--cinabro);
-    color: #fff;
-  }
-  .itin-head-main {
-    flex: 1;
-    min-width: 0;
-  }
-  .itin-compact-stops {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    padding: 4px 8px 2px;
-  }
-  .itin-compact-dot {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: #fff;
-    background: var(--cinabro);
-    flex: none;
-  }
-  .itin-compact-line {
-    flex: 1;
-    height: 2px;
-    min-width: 12px;
-    max-width: 40px;
-    background: linear-gradient(90deg, var(--cinabro), color-mix(in srgb, var(--cinabro) 30%, transparent));
-    opacity: 0.7;
-  }
-  .itin-expand-hint {
-    margin: 0;
-    padding: 0 4px 2px;
-    text-align: center;
-    font-size: 0.72rem;
-    color: var(--ink-faint);
-  }
-  .walk-hint-sheet {
-    margin: 8px 0 0;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--gold) 14%, var(--sheet-bg-solid));
-    border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--line));
-    font-size: 0.76rem;
-    line-height: 1.45;
-    color: var(--ink-soft);
-  }
-  .itin-legs {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 8px 0 4px;
-  }
-  .itin-legs::-webkit-scrollbar { display: none; }
-  .itin-leg-tab {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    padding: 5px 12px;
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--line-strong);
-    background: var(--paper-2);
-    color: var(--ink-soft);
-  }
-  .itin-leg-tab.on {
-    background: var(--cinabro);
-    border-color: var(--cinabro);
-    color: #fff;
-  }
-  .itin-directions {
-    list-style: none;
-    margin: 0;
-    padding: 0 2px 8px;
-    max-height: 120px;
-    overflow-y: auto;
-    border-bottom: 1px solid var(--line);
-  }
-  .itin-dir {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-    font-size: 0.82rem;
-    line-height: 1.4;
-    color: var(--ink-body);
-  }
-  .itin-dir:last-child { border-bottom: none; }
-  .itin-dir-meta {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--ink-faint);
-  }
-  .itin-dir-empty {
-    font-size: 0.78rem;
-    margin: 0;
-    padding: 4px 2px 8px;
-  }
-  .itin-sheet-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 6px;
-    flex: none;
-  }
-  .itin-sheet-title {
-    display: block;
-    font-family: var(--serif);
-    font-size: 1.05rem;
-    color: var(--ink);
-    line-height: 1.25;
-  }
-  .itin-close {
-    flex: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--ink-soft);
-    font-size: 1.25rem;
-    line-height: 1;
-  }
-  .itin-stops {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-    min-height: 0;
-  }
-  .itin-stop {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 10px;
-    text-align: left;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--line);
-    background: var(--paper-2);
-  }
-  .itin-stop-num {
-    flex: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: #fff;
-    background: var(--cinabro);
-  }
-  .itin-stop-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .itin-stop-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.25;
-  }
-  .itin-stop-cat {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--c);
-  }
-  .itin-stop-go {
-    flex: none;
-    color: var(--ink-faint);
-    font-size: 1.1rem;
-  }
-
 
   :global(.poi-pin) { position: relative; cursor: pointer; width: 0; height: 0; }
   :global(.poi-pin.pin-hidden) {
