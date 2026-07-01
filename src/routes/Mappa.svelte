@@ -1276,7 +1276,7 @@
     </div>
   {/if}
 
-  {#if !navDestPoi}
+  {#if !navDestPoi && mapLayer !== 'metro'}
     <div class="map-fabs">
       {#if !navigating && !activeItin && !mapFullscreen}
         <button
@@ -1963,6 +1963,11 @@
   }
   .metro-sheet.route-tab {
     max-height: 52%;
+  }
+  /* In fullscreen la stage è fixed a 100dvh: il pannello va alzato sopra
+     l'home indicator (il bottom assoluto è relativo al bordo schermo). */
+  .map-stage.fullscreen .metro-sheet {
+    bottom: calc(14px + var(--safe-bottom));
   }
   .metro-sheet-tabs {
     display: grid;
