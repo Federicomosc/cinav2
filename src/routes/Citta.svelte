@@ -168,17 +168,6 @@
       0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
       0 28px 52px color-mix(in srgb, var(--accent) 22%, transparent);
   }
-  /* Cornice dorata: il layer imperiale comune a tutte le card-città */
-  .city-card::after {
-    content: '';
-    position: absolute;
-    inset: 7px;
-    border-radius: calc(var(--radius-lg) - 6px);
-    border: 1px solid color-mix(in srgb, var(--gold) 26%, transparent);
-    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--gold) 5%, transparent);
-    pointer-events: none;
-    z-index: 4;
-  }
 
   .cover-zone {
     position: relative;
