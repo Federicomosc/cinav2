@@ -255,17 +255,6 @@
       0 0 0 1px color-mix(in srgb, var(--c) 8%, transparent),
       0 28px 56px color-mix(in srgb, var(--c) 14%, transparent);
   }
-  /* Cornice dorata: layer imperiale comune (come le card-città) */
-  .day-sheet::after {
-    content: '';
-    position: absolute;
-    inset: 7px;
-    border-radius: calc(var(--radius-lg) - 6px);
-    border: 1px solid color-mix(in srgb, var(--gold) 24%, transparent);
-    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--gold) 4%, transparent);
-    pointer-events: none;
-    z-index: 5;
-  }
   .sheet-accent {
     height: 4px;
     background: linear-gradient(
