@@ -15,7 +15,7 @@ export default defineConfig({
       // NB: non elencare qui font/phrases/places: sono già coperti da
       // `workbox.globPatterns` (woff2/pbf/m4a/jpg). Duplicarli genera due voci
       // di precache per file (una URL-encoded, una no) → manifest gonfio.
-      includeAssets: ['app-icon.svg'],
+      includeAssets: ['app-icon-192.png', 'app-icon-512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Cina Tour 2026',
         short_name: 'Cina 2026',
@@ -28,7 +28,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         icons: [
-          { src: 'app-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: 'app-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'app-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'app-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
