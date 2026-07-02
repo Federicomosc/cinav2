@@ -1,6 +1,6 @@
-// Aggiornamento PWA con gesto esplicito (registerType: 'prompt' in vite.config.ts).
-// Il service worker nuovo resta in attesa finché l'utente non tocca "Aggiora":
-// evita reload improvvisi che farebbero perdere un form non salvato sul campo.
+// Aggiornamento PWA automatico (registerType: 'autoUpdate' in vite.config.ts).
+// Alla comparsa di un nuovo service worker la pagina si ricarica da sé: niente
+// banner. Senza onNeedRefresh il virtual module gestisce da solo update+reload.
 import { registerSW } from 'virtual:pwa-register';
 
 export const pwaUpdate = $state<{ needRefresh: boolean; offlineReady: boolean }>({
@@ -12,9 +12,7 @@ let apply: ((reloadPage?: boolean) => Promise<void>) | undefined;
 
 export function initPwaUpdate(): void {
   apply = registerSW({
-    onNeedRefresh() {
-      pwaUpdate.needRefresh = true;
-    },
+    immediate: true,
     onOfflineReady() {
       pwaUpdate.offlineReady = true;
     },
